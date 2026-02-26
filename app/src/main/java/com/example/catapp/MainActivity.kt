@@ -8,16 +8,22 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         val imageView = ImageView(this)
-        // ここで画像を設定（あとでdrawableにアップロードするファイル名）
+        // 標準のギャラリーアイコンを設定（これは確実に存在します）
         imageView.setImageResource(android.R.drawable.ic_menu_gallery) 
         setContentView(imageView)
 
         imageView.setOnClickListener {
-            // rawフォルダに置く音声ファイルを再生
-            val mp = MediaPlayer.create(this, android.R.raw.ok) // 仮の音
-            mp.start()
-            mp.setOnCompletionListener { it.release() }
+            // 注意：標準の 'ok' という音声は存在しないため、
+            // 自分の res/raw フォルダに音声を入れるまでは、このクリック処理をコメントアウトするか、
+            // 以下のように「もしファイルがあれば再生する」という形にするのが安全です。
+            
+            /* 自分の音声ファイル（例: cat_meow.mp3）を res/raw に入れたら以下のコメントを解除してください
+            val mp = MediaPlayer.create(this, R.raw.cat_meow) 
+            mp?.start()
+            mp?.setOnCompletionListener { it.release() }
+            */
         }
     }
 }
