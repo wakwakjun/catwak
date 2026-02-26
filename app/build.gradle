@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace 'com.example.catapp'
-    compileSdk 34
+    compileSdk 36
     defaultConfig {
         applicationId "com.example.catapp"
         minSdk 24
