@@ -16,7 +16,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        # ここに 'env' ブロックを追加して Secrets を環境変数として流し込みます
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
@@ -24,3 +23,10 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # --- ここから下が不足していました ---
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: cat-app-bundle
+          path: app/build/outputs/bundle/release/*.aab
