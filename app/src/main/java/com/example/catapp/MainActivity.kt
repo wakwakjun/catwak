@@ -1,4 +1,4 @@
-package com.example.catapp
+package jp.myuser.supercatapp
 
 import android.media.MediaPlayer
 import android.os.Bundle
