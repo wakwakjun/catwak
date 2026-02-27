@@ -1,4 +1,4 @@
-package jp.myuser.supercatapp
+package jp.myuser.supercatapp // あなたのパッケージ名に合わせてください
 
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -9,21 +9,31 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // 画像を表示するビューを作成
         val imageView = ImageView(this)
-        // 標準のギャラリーアイコンを設定（これは確実に存在します）
-        imageView.setImageResource(android.R.drawable.ic_menu_gallery) 
+        
+        // ★ ここを修正：drawableフォルダに入れた「cat_image」を表示するように指定
+        val imageResId = resources.getIdentifier("cat_image", "drawable", packageName)
+        if (imageResId != 0) {
+            imageView.setImageResource(imageResId)
+        } else {
+            // 画像が見つからない場合は標準アイコン（予備）
+            imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
+        
+        // 画像を画面いっぱいに表示
+        imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
         setContentView(imageView)
 
+        // タップした時の処理
         imageView.setOnClickListener {
-            // 注意：標準の 'ok' という音声は存在しないため、
-            // 自分の res/raw フォルダに音声を入れるまでは、このクリック処理をコメントアウトするか、
-            // 以下のように「もしファイルがあれば再生する」という形にするのが安全です。
-            
-            /* 自分の音声ファイル（例: cat_meow.mp3）を res/raw に入れたら以下のコメントを解除してください
-            val mp = MediaPlayer.create(this, R.raw.cat_meow) 
-            mp?.start()
-            mp?.setOnCompletionListener { it.release() }
-            */
+            // ★ ここを修正：rawフォルダに入れた「meow」を再生
+            val soundResId = resources.getIdentifier("meow", "raw", packageName)
+            if (soundResId != 0) {
+                val mp = MediaPlayer.create(this, soundResId)
+                mp.start()
+                mp.setOnCompletionListener { it.release() }
+            }
         }
     }
 }
