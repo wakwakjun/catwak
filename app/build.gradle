@@ -3,19 +3,24 @@ plugins {
     id 'kotlin-android'
 }
 
+// ★ ここに好きなアプリ名（半角英数字のみ）を入れてください
+def appName = "supercatapp" 
+// ★ ここにあなたの名前（半角英数字のみ）を入れてください
+def developerName = "myuser"
+
 android {
-    namespace 'com.example.catapp'
+    // パッケージ名を自動生成 (例: jp.myuser.supercatapp)
+    namespace "jp.${developerName}.${appName}"
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.catapp"
+        applicationId "jp.${developerName}.${appName}"
         minSdk 24
         targetSdk 34
         versionCode 1
         versionName "1.0"
     }
 
-    // ここでJavaのバージョンを17に統一します
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -27,7 +32,6 @@ android {
     signingConfigs {
         release {
             storeFile file("my-release-key.jks")
-            // ここを以下のように書き換えてください
             storePassword System.getenv("KEYSTORE_PASSWORD")
             keyAlias System.getenv("KEY_ALIAS")
             keyPassword System.getenv("KEY_PASSWORD")
