@@ -1,39 +1,60 @@
-package jp.myuser.supercatapp // あなたのパッケージ名に合わせてください
+package jp.myuser.supercatapp
 
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.view.View
 import android.widget.ImageView
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
+    private var mediaPlayer: MediaPlayer? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 画像を表示するビューを作成
+        // 画面全体の土台（レイアウト）を作成
+        val rootLayout = FrameLayout(this)
+        rootLayout.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+
+        // 猫の画像を表示するビューを作成
         val imageView = ImageView(this)
-        
-        // ★ ここを修正：drawableフォルダに入れた「cat_image」を表示するように指定
         val imageResId = resources.getIdentifier("cat_image", "drawable", packageName)
         if (imageResId != 0) {
             imageView.setImageResource(imageResId)
         } else {
-            // 画像が見つからない場合は標準アイコン（予備）
             imageView.setImageResource(android.R.drawable.ic_menu_gallery)
         }
-        
-        // 画像を画面いっぱいに表示
         imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
-        setContentView(imageView)
+        
+        // 土台に画像を追加
+        rootLayout.addView(imageView)
+        setContentView(rootLayout)
 
-        // タップした時の処理
-        imageView.setOnClickListener {
-            // ★ ここを修正：rawフォルダに入れた「meow」を再生
-            val soundResId = resources.getIdentifier("meow", "raw", packageName)
-            if (soundResId != 0) {
-                val mp = MediaPlayer.create(this, soundResId)
-                mp.start()
-                mp.setOnCompletionListener { it.release() }
-            }
+        // ★ 修正ポイント：画像ではなく「土台（画面全体）」にタップイベントを設定
+        rootLayout.setOnClickListener {
+            playSound()
         }
+    }
+
+    private fun playSound() {
+        mediaPlayer?.release()
+        try {
+            val resId = resources.getIdentifier("meow", "raw", packageName)
+            if (resId != 0) {
+                mediaPlayer = MediaPlayer.create(this, resId)
+                mediaPlayer?.start()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.release()
     }
 }
