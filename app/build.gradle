@@ -11,12 +11,12 @@ def developerName = "myuser"
 android {
     // パッケージ名を自動生成 (例: jp.myuser.supercatapp)
     namespace "jp.${developerName}.${appName}"
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "jp.${developerName}.${appName}"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0"
     }
