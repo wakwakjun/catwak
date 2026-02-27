@@ -3,13 +3,12 @@ plugins {
     id 'kotlin-android'
 }
 
-// ★ ここに好きなアプリ名（半角英数字のみ）を入れてください
+// ★ 変数の定義を一番上に移動しました
 def appName = "supercatapp" 
-// ★ ここにあなたの名前（半角英数字のみ）を入れてください
 def developerName = "myuser"
 
 android {
-    // パッケージ名を自動生成 (例: jp.myuser.supercatapp)
+    // 変数を定義した後に使用するように修正
     namespace "jp.${developerName}.${appName}"
     compileSdk 35
 
@@ -17,8 +16,8 @@ android {
         applicationId "jp.${developerName}.${appName}"
         minSdk 24
         targetSdk 35
-        versionCode 1.1
-        versionName "1.0"
+        versionCode 2 // 前回のアップロード失敗を踏まえ「2」にしています
+        versionName "1.1"
     }
 
     compileOptions {
