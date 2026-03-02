@@ -17,46 +17,48 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. 画面の土台（レイアウト）を作成
         val rootLayout = FrameLayout(this)
-        rootLayout.setBackgroundColor(Color.BLACK) // 背景を黒にして画像を引き立てる
+        rootLayout.setBackgroundColor(Color.BLACK)
 
-        // 2. ランダムに猫を表示する
+        // 1. ランダムな猫を表示（cat1 ~ cat7）
         val imageView = ImageView(this)
-        val randomNum = (1..7).random() // 1から7の数字をランダムに選ぶ
+        val randomNum = (1..7).random()
         val imageResId = resources.getIdentifier("cat$randomNum", "drawable", packageName)
         
         if (imageResId != 0) {
             imageView.setImageResource(imageResId)
         } else {
+            // もし画像がない場合は標準アイコンを表示してエラーを防ぐ
             imageView.setImageResource(android.R.drawable.ic_menu_gallery)
         }
         imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
         rootLayout.addView(imageView)
 
-        // 3. 曜日を表示する
+        // 2. 曜日を表示
         val textView = TextView(this)
-        val sdf = SimpleDateFormat("EEEE", Locale.JAPANESE) // 日本語で「〇曜日」と取得
+        val sdf = SimpleDateFormat("EEEE", Locale.JAPANESE)
         val dayOfWeek = sdf.format(Date())
         
         textView.text = "今日は $dayOfWeek です"
-        textView.textColor = Color.WHITE
+        
+        // ★ここを修正しました！ (textColor -> setTextColor)
+        textView.setTextColor(Color.WHITE)
+        
         textView.textSize = 24f
         textView.gravity = Gravity.CENTER
         
-        // 文字の位置を画面下部に配置
         val textParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            setMargins(0, 0, 0, 100) // 下から100ピクセル浮かせる
+            setMargins(0, 0, 0, 150)
         }
         rootLayout.addView(textView, textParams)
 
         setContentView(rootLayout)
 
-        // 4. 画面タップで音を鳴らす
+        // 3. 画面のどこを触っても音が鳴る
         rootLayout.setOnClickListener {
             playSound()
         }
@@ -69,6 +71,7 @@ class MainActivity : AppCompatActivity() {
             if (resId != 0) {
                 mediaPlayer = MediaPlayer.create(this, resId)
                 mediaPlayer?.start()
+                mediaPlayer?.setOnCompletionListener { it.release() }
             }
         } catch (e: Exception) {
             e.printStackTrace()
