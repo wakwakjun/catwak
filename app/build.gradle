@@ -16,8 +16,8 @@ android {
         applicationId "jp.${developerName}.${appName}"
         minSdk 24
         targetSdk 35
-        versionCode 4 // 前回のアップロード失敗を踏まえ「2」にしています
-        versionName "4.o"
+        versionCode 5 // 前回のアップロード失敗を踏まえ「2」にしています
+        versionName "5.o"
     }
 
     compileOptions {
