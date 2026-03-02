@@ -1,4 +1,4 @@
-package jp.myuser.supercatapp // あなたのパッケージ名に合わせてください
+package jp.myuser.supercatapp
 
 import android.graphics.Color
 import android.media.MediaPlayer
@@ -17,33 +17,40 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 1. 土台の作成（ここが壊れることはありません）
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(Color.BLACK)
 
-        // 1. ランダムな猫を表示（cat1 ~ cat7）
+        // 2. 猫の画像表示（エラーが起きやすい場所を保護）
         val imageView = ImageView(this)
-        val randomNum = (1..7).random()
-        val imageResId = resources.getIdentifier("cat$randomNum", "drawable", packageName)
-        
-        if (imageResId != 0) {
-            imageView.setImageResource(imageResId)
-        } else {
-            // もし画像がない場合は標準アイコンを表示してエラーを防ぐ
-            imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        try {
+            val randomNum = (1..7).random()
+            val imageResId = resources.getIdentifier("cat$randomNum", "drawable", packageName)
+            
+            if (imageResId != 0) {
+                imageView.setImageResource(imageResId)
+            } else {
+                // 画像がない時はドロイド君を表示
+                imageView.setImageResource(android.R.drawable.sym_def_app_icon)
+            }
+        } catch (e: Exception) {
+            // エラーが起きても無視して次へ
         }
+        
         imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
         rootLayout.addView(imageView)
 
-        // 2. 曜日を表示
+        // 3. 曜日の表示（ここも保護）
         val textView = TextView(this)
-        val sdf = SimpleDateFormat("EEEE", Locale.JAPANESE)
-        val dayOfWeek = sdf.format(Date())
+        try {
+            val sdf = SimpleDateFormat("EEEE", Locale.JAPANESE)
+            val dayOfWeek = sdf.format(Date())
+            textView.text = "今日は $dayOfWeek です"
+        } catch (e: Exception) {
+            textView.text = "Hello Cat!"
+        }
         
-        textView.text = "今日は $dayOfWeek です"
-        
-        // ★ここを修正しました！ (textColor -> setTextColor)
         textView.setTextColor(Color.WHITE)
-        
         textView.textSize = 24f
         textView.gravity = Gravity.CENTER
         
@@ -58,15 +65,15 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(rootLayout)
 
-        // 3. 画面のどこを触っても音が鳴る
+        // 4. タップ処理
         rootLayout.setOnClickListener {
             playSound()
         }
     }
 
     private fun playSound() {
-        mediaPlayer?.release()
         try {
+            mediaPlayer?.release()
             val resId = resources.getIdentifier("meow", "raw", packageName)
             if (resId != 0) {
                 mediaPlayer = MediaPlayer.create(this, resId)
@@ -74,7 +81,7 @@ class MainActivity : AppCompatActivity() {
                 mediaPlayer?.setOnCompletionListener { it.release() }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // 音が鳴らなくてもアプリは落とさない
         }
     }
 
