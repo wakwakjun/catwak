@@ -1,5 +1,6 @@
 package jp.myuser.supercatapp
 
+import android.content.Context
 import android.graphics.Color
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -17,39 +18,43 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. 土台の作成（ここが壊れることはありません）
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(Color.BLACK)
 
-        // 2. 猫の画像表示（エラーが起きやすい場所を保護）
-        val imageView = ImageView(this)
-        try {
-            val randomNum = (1..7).random()
-            val imageResId = resources.getIdentifier("cat$randomNum", "drawable", packageName)
-            
-            if (imageResId != 0) {
-                imageView.setImageResource(imageResId)
-            } else {
-                // 画像がない時はドロイド君を表示
-                imageView.setImageResource(android.R.drawable.sym_def_app_icon)
-            }
-        } catch (e: Exception) {
-            // エラーが起きても無視して次へ
-        }
+        // --- 「今日のねこ」を決定するロジック ---
+        val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
+        val todayStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         
+        // 保存されている日付を取得
+        val lastDate = prefs.getString("last_date", "")
+        var catId = prefs.getInt("cat_id", 1)
+
+        // もし今日初めてアプリを開いたなら、新しい猫をランダムで選んで保存する
+        if (todayStr != lastDate) {
+            catId = (1..7).random()
+            prefs.edit().apply {
+                putString("last_date", todayStr)
+                putInt("cat_id", catId)
+                apply()
+            }
+        }
+
+        // 1. 保存された（または新しく選ばれた）猫を表示
+        val imageView = ImageView(this)
+        val imageResId = resources.getIdentifier("cat$catId", "drawable", packageName)
+        
+        if (imageResId != 0) {
+            imageView.setImageResource(imageResId)
+        } else {
+            imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
         imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
         rootLayout.addView(imageView)
 
-        // 3. 曜日の表示（ここも保護）
+        // 2. 曜日の表示
         val textView = TextView(this)
-        try {
-            val sdf = SimpleDateFormat("EEEE", Locale.JAPANESE)
-            val dayOfWeek = sdf.format(Date())
-            textView.text = "今日は $dayOfWeek です"
-        } catch (e: Exception) {
-            textView.text = "Hello Cat!"
-        }
-        
+        val dayOfWeek = SimpleDateFormat("EEEE", Locale.JAPANESE).format(Date())
+        textView.text = "今日は $dayOfWeek です"
         textView.setTextColor(Color.WHITE)
         textView.textSize = 24f
         textView.gravity = Gravity.CENTER
@@ -65,10 +70,8 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(rootLayout)
 
-        // 4. タップ処理
-        rootLayout.setOnClickListener {
-            playSound()
-        }
+        // 3. タップで音を鳴らす
+        rootLayout.setOnClickListener { playSound() }
     }
 
     private fun playSound() {
@@ -80,9 +83,7 @@ class MainActivity : AppCompatActivity() {
                 mediaPlayer?.start()
                 mediaPlayer?.setOnCompletionListener { it.release() }
             }
-        } catch (e: Exception) {
-            // 音が鳴らなくてもアプリは落とさない
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     override fun onDestroy() {
