@@ -21,27 +21,32 @@ class MainActivity : AppCompatActivity() {
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(Color.BLACK)
 
-        // --- 「今日のねこ」を決定するロジック ---
+        // --- 「今日のねこ」と「今日の状態」を決定 ---
         val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
         val todayStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         
-        // 保存されている日付を取得
         val lastDate = prefs.getString("last_date", "")
-        var catId = prefs.getInt("cat_id", 1)
+        var catNum = prefs.getInt("cat_num", 1)
+        var catStatus = prefs.getString("cat_status", "sleep")
 
-        // もし今日初めてアプリを開いたなら、新しい猫をランダムで選んで保存する
         if (todayStr != lastDate) {
-            catId = (1..7).random()
+            // 1〜7の猫をランダム選択
+            catNum = (1..7).random()
+            // 3つの状態をランダム選択
+            catStatus = listOf("sleep", "eat", "play").random()
+            
             prefs.edit().apply {
                 putString("last_date", todayStr)
-                putInt("cat_id", catId)
+                putInt("cat_num", catNum)
+                putString("cat_status", catStatus)
                 apply()
             }
         }
 
-        // 1. 保存された（または新しく選ばれた）猫を表示
+        // 1. 画像の表示 (例: cat1_sleep)
         val imageView = ImageView(this)
-        val imageResId = resources.getIdentifier("cat$catId", "drawable", packageName)
+        val fileName = "cat${catNum}_$catStatus"
+        val imageResId = resources.getIdentifier(fileName, "drawable", packageName)
         
         if (imageResId != 0) {
             imageView.setImageResource(imageResId)
@@ -54,9 +59,17 @@ class MainActivity : AppCompatActivity() {
         // 2. 曜日の表示
         val textView = TextView(this)
         val dayOfWeek = SimpleDateFormat("EEEE", Locale.JAPANESE).format(Date())
-        textView.text = "今日は $dayOfWeek です"
+        
+        // 状態に合わせてメッセージを変える
+        val statusText = when(catStatus) {
+            "sleep" -> "お休み中"
+            "eat" -> "お食事中"
+            else -> "お遊び中"
+        }
+        
+        textView.text = "今日は $dayOfWeek\n猫ちゃんは $statusText です"
         textView.setTextColor(Color.WHITE)
-        textView.textSize = 24f
+        textView.textSize = 22f
         textView.gravity = Gravity.CENTER
         
         val textParams = FrameLayout.LayoutParams(
@@ -64,7 +77,7 @@ class MainActivity : AppCompatActivity() {
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            setMargins(0, 0, 0, 150)
+            setMargins(0, 0, 0, 100)
         }
         rootLayout.addView(textView, textParams)
 
