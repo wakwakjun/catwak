@@ -1,5 +1,7 @@
 name: Build Android App
+
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,24 +17,29 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # AABとAPKを1回のコマンドで同時にビルドします
+      # 1. Base64文字列からキーストアファイル(.jks)を復元します
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
+
+      # 2. 復元したキーストアを使ってAABとAPKをビルドします
       - name: Build AAB and APK
         run: |
           chmod +x gradlew
-          ./gradlew bundleRelease assembleRelease
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ./gradlew bundleRelease assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release-key.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
-      # 1. Playストア用のAABを保存
+      # 3. Playストア用のAABを保存
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: cat-app-bundle-aab
           path: app/build/outputs/bundle/release/*.aab
 
-      # 2. エミュレータ・実機確認用のAPKを保存
+      # 4. エミュレータ・実機確認用のAPKを保存
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
