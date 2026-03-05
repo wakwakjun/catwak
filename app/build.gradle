@@ -9,11 +9,11 @@ def developerName = "myuser"
 
 android {
     // 変数を定義した後に使用するように修正
-    namespace "jp.${developerName}.${appName}.test"
+    namespace "jp.${developerName}.${appName}"
     compileSdk 35
 
     defaultConfig {
-        applicationId "jp.${developerName}.${appName}.test"
+        applicationId "jp.${developerName}.${appName}"
         minSdk 24
         targetSdk 35
         versionCode 10 // 前回のアップロード失敗を踏まえ「2」にしています
