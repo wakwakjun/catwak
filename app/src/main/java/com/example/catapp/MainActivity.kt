@@ -13,127 +13,127 @@ import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
-    private lateinit var rootLayout: FrameLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showMainScreen()
     }
 
-    // --- メイン画面（猫を表示する画面） ---
+    // --- メイン画面 ---
     private fun showMainScreen() {
-        rootLayout = FrameLayout(this)
+        // 土台となるLayout
+        val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(Color.BLACK)
 
         val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
         val todayStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         
+        // 1. 【ロジック修正】猫の種類(1-7)は1日固定、ポーズ(sleep/eat/play)は毎回ランダム
         var catNum = prefs.getInt("cat_num", 1)
-        var catStatus = prefs.getString("cat_status", "sleep") ?: "sleep"
-
-        // 1. 日付が変わっていたら新しい猫を決定
         if (todayStr != prefs.getString("last_date", "")) {
             catNum = (1..7).random()
-            catStatus = listOf("sleep", "eat", "play").random()
-            prefs.edit().apply {
-                putString("last_date", todayStr)
-                putInt("cat_num", catNum)
-                putString("cat_status", catStatus)
-                // 見た猫を記録（例: "cat1_sleep" を true に）
-                putBoolean("seen_cat${catNum}_$catStatus", true)
-                apply()
-            }
+            prefs.edit().putString("last_date", todayStr).putInt("cat_num", catNum).apply()
         }
+        
+        // ポーズは起動のたびにランダム
+        val currentStatus = listOf("sleep", "eat", "play").random()
+        
+        // 見た猫のフラグを保存（猫度用）
+        prefs.edit().putBoolean("seen_cat${catNum}_$currentStatus", true).apply()
 
         // 2. 猫の画像表示
         val imageView = ImageView(this)
-        val imageResId = resources.getIdentifier("cat${catNum}_$catStatus", "drawable", packageName)
+        val imageResId = resources.getIdentifier("cat${catNum}_$currentStatus", "drawable", packageName)
         imageView.setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
         imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        
+        // 【重要】画像自体にクリックリスナーをつけて音を鳴らす
+        imageView.setOnClickListener { playSound() }
         rootLayout.addView(imageView)
 
-        // 3. 「猫度」リンク（左上）
+        // 3. 猫度リンク（左上）
         val catDegreeBtn = TextView(this).apply {
-            text = "猫度 >"
+            text = "● 猫度を確認"
             setTextColor(Color.YELLOW)
-            textSize = 18f
-            setPadding(40, 40, 40, 40)
+            textSize = 20f
+            setPadding(50, 50, 50, 50)
+            // ボタンとして独立させる
             setOnClickListener { showDegreeScreen() }
         }
         rootLayout.addView(catDegreeBtn)
 
-        // 4. 下部テキスト（曜日と状態）
-        val statusJP = when(catStatus) { "sleep" -> "お休み中" "eat" -> "お食事中" else -> "お遊び中" }
+        // 4. 下部テキスト
+        val statusJP = when(currentStatus) { "sleep" -> "お休み中" "eat" -> "お食事中" else -> "お遊び中" }
         val dayOfWeek = SimpleDateFormat("EEEE", Locale.JAPANESE).format(Date())
         val textView = TextView(this).apply {
-            text = "今日は $dayOfWeek\n猫ちゃんは $statusJP です"
+            text = "今日は $dayOfWeek\n猫ちゃんは $statusJP です\n(画面をタップしてね)"
             setTextColor(Color.WHITE)
-            textSize = 20f
+            textSize = 18f
             gravity = Gravity.CENTER
         }
         val textParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            setMargins(0, 0, 0, 100)
+            setMargins(0, 0, 0, 120)
         }
         rootLayout.addView(textView, textParams)
 
         setContentView(rootLayout)
-        rootLayout.setOnClickListener { playSound() }
     }
 
-    // --- 猫度画面（グラフを表示する画面） ---
+    // --- 猫度画面 ---
     private fun showDegreeScreen() {
         val degreeLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#121212")) // 濃いグレー
+            setBackgroundColor(Color.parseColor("#1A1A1A"))
+            setPadding(40, 40, 40, 40)
         }
 
         val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
-        
-        // 達成度の計算 (全21種類)
         var seenCount = 0
         for (i in 1..7) {
-            for (status in listOf("sleep", "eat", "play")) {
-                if (prefs.getBoolean("seen_cat${i}_$status", false)) seenCount++
+            for (s in listOf("sleep", "eat", "play")) {
+                if (prefs.getBoolean("seen_cat${i}_$s", false)) seenCount++
             }
         }
-        val progress = (seenCount.toFloat() / 21f * 100).toInt()
+        val progressPercent = (seenCount.toFloat() / 21f * 100).toInt()
 
         // タイトル
         val titleView = TextView(this).apply {
-            text = "現在の猫度"
+            text = "コンプリートまであと少し！"
             setTextColor(Color.WHITE)
-            textSize = 28f
-            setPadding(0, 0, 0, 50)
+            textSize = 24f
+            setPadding(0, 0, 0, 80)
         }
         degreeLayout.addView(titleView)
 
-        // 円形プログレスバー（簡易グラフ）
-        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
+        // 円形グラフ（ProgressBarのスタイルを調整）
+        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            // 水平バーではなく、カスタムで円形っぽく見せるか、標準の大きな円を使う
+            // 今回は確実に表示されるよう「大きな円形」をベースにします
+        }
+        val circleProgress = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
             isIndeterminate = false
             max = 100
-            this.progress = progress
-            scaleX = 3f
-            scaleY = 3f
+            progress = progressPercent
+            // 見た目を大きくする
+            scaleX = 2.5f
+            scaleY = 2.5f
         }
-        degreeLayout.addView(progressBar)
+        degreeLayout.addView(circleProgress)
 
         // パーセント表示
         val percentView = TextView(this).apply {
-            text = "$progress %"
+            text = "猫度：$progressPercent %"
             setTextColor(Color.YELLOW)
-            textSize = 40f
-            setPadding(0, 100, 0, 100)
+            textSize = 36f
+            setPadding(0, 120, 0, 80)
         }
         degreeLayout.addView(percentView)
 
-        // 戻るリンク
-        val backBtn = TextView(this).apply {
-            text = "< 戻る"
-            setTextColor(Color.CYAN)
-            textSize = 20f
-            setPadding(40, 40, 40, 40)
+        // 戻るボタン（ボタンらしく背景をつける）
+        val backBtn = Button(this).apply {
+            text = "戻る"
             setOnClickListener { showMainScreen() }
         }
         degreeLayout.addView(backBtn)
