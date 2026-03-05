@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.application.test'
+    id 'com.android.application'
     id 'kotlin-android'
 }
 
@@ -9,11 +9,11 @@ def developerName = "myuser"
 
 android {
     // 変数を定義した後に使用するように修正
-    namespace "jp.${developerName}.${appName}"
+    namespace "jp.${developerName}.${appName}.test"
     compileSdk 35
 
     defaultConfig {
-        applicationId "jp.${developerName}.${appName}"
+        applicationId "jp.${developerName}.${appName}.test"
         minSdk 24
         targetSdk 35
         versionCode 10 // 前回のアップロード失敗を踏まえ「2」にしています
