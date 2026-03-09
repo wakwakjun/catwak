@@ -17,12 +17,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      # --- ここから追加：画像軽量化ステップ ---
+      - name: Install WebP Tools
+        run: sudo apt-get install -y webp
+
+      - name: Convert Images to WebP
+        run: |
+          # drawable内のpng/jpgをwebpに変換し、元ファイルを消去する
+          # もし画像がない場合でもエラーにならないように設定
+          find app/src/main/res/drawable -type f \( -name "*.png" -o -name "*.jpg" \) -exec sh -c 'cwebp -q 75 "$1" -o "${1%.*}.webp" && rm "$1"' _ {} \; || true
+      # --- ここまで追加 ---
+
       # 1. Base64文字列からキーストアファイル(.jks)を復元します
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
 
-      # 2. 復元したキーストアを使ってAABとAPKをビルドします
+      # 2. 軽量化された画像を使ってビルドを実行
       - name: Build AAB and APK
         run: |
           chmod +x gradlew
