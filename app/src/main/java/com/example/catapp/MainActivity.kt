@@ -20,17 +20,30 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    // --- 共通機能：アプリ終了ボタンを作成 ---
-    private fun createExitButton(): TextView {
-        return TextView(this).apply {
+    // --- 共通機能：アプリ終了ボタンを作成（反応を劇的に改善） ---
+    private fun createExitButton(): View {
+        // 1. ボタンを包む「座布団（コンテナ）」を作る
+        val touchArea = FrameLayout(this).apply {
+            // タップできる範囲を広げる（48dp相当以上の余白を確保）
+            setPadding(40, 40, 40, 40) 
+            setOnClickListener { finish() } // コンテナごとタップ可能にする
+            isClickable = true
+            isFocusable = true
+        }
+
+        // 2. 見た目としての「✕」テキスト
+        val xText = TextView(this).apply {
             text = "✕"
             setTextColor(Color.WHITE)
-            textSize = 24f
+            textSize = 22f
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#44000000")) // 半透明の黒
-            setPadding(30, 20, 30, 20)
-            setOnClickListener { finish() } // アプリを終了
+            // 少し背景を濃くして、猫画像の上でも見やすく
+            setBackgroundColor(Color.parseColor("#88000000")) 
+            setPadding(20, 10, 20, 10)
         }
+
+        touchArea.addView(xText)
+        return touchArea
     }
 
     // --- メイン画面 ---
