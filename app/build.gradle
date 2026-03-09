@@ -10,16 +10,18 @@ android {
     namespace "jp.${developerName}.${appName}"
     compileSdk 35
 
-    // GitHub Actions から渡されるビルド番号を数値として取得
-    def githubRunNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "1"
+ // GitHub Actions の通算実行番号を取得。
+    // もし取得できなかった場合は、前回の成功番号より確実に大きい「100」をベースにします。
+    def githubRunNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "100"
     def autoVersionCode = githubRunNumber.toInteger()
     def autoVersionName = "1.0.${githubRunNumber}"
 
     defaultConfig {
         applicationId "jp.myuser.supercatapp"
         minSdk 24
-        targetSdk 35
+        targetSdk 35 // ここは35でOK
         
+        // ★ ここで生成した変数を使います
         versionCode autoVersionCode
         versionName autoVersionName
 
