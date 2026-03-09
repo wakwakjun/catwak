@@ -23,9 +23,14 @@ jobs:
 
       - name: Convert Images to WebP
         run: |
-          # drawableとmipmapの両方の画像を変換対象にする
-          find app/src/main/res/ -type f \( -name "*.png" -o -name "*.jpg" \) -exec sh -c 'cwebp -q 75 "$1" -o "${1%.*}.webp" && rm "$1"' _ {} \; || true
-
+          # 拡張子の前のドットを残さず、正しくリネームして変換するように修正
+          # (例: image.png -> image.webp)
+          find app/src/main/res/ -type f \( -name "*.png" -o -name "*.jpg" \) -exec sh -c '
+            original="$1"
+            base="${original%.*}"
+            cwebp -q 75 "$original" -o "$base.webp" && rm "$original"
+          ' _ {} \; || true
+          
       # 1. Base64文字列からキーストアファイル(.jks)を復元
       - name: Decode Keystore
         run: |
