@@ -23,13 +23,17 @@ jobs:
 
       - name: Convert Images to WebP
         run: |
-          # 拡張子を取り除いてから .webp を付与する、より安全なスクリプト
+          # 1. まず、過去の失敗で生成された可能性のある「.png.webp」などの不正ファイルを全削除
+          find app/src/main/res/ -type f -name "*.png.webp" -delete
+          find app/src/main/res/ -type f -name "*.jpg.webp" -delete
+
+          # 2. その上で、正しく変換を行う
           for file in $(find app/src/main/res/ -type f \( -name "*.png" -o -name "*.jpg" \)); do
-            # 拡張子を除いたベース名を取得 (例: image.png -> image)
+            # 拡張子を丁寧に取り除く
             filename="${file%.*}"
-            # 変換実行 (例: image.png -> image.webp)
+            # 変換を実行 (例: ic_launcher_background.webp)
             cwebp -q 75 "$file" -o "$filename.webp"
-            # 変換に成功したら元のファイルを確実に削除
+            # 変換できたら元の重いファイルを消す
             if [ -f "$filename.webp" ]; then
               rm "$file"
             fi
