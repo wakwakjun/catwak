@@ -68,6 +68,20 @@ class MainActivity : AppCompatActivity() {
             val imageResId = resources.getIdentifier("cat${catNum}_$currentStatus", "drawable", packageName)
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
+            // --- ★ここから「呼吸」の魔法を書き足し ---
+            val breathing = android.view.animation.ScaleAnimation(
+                1.0f, 1.05f, // 1.0倍から1.05倍へ（わずかに膨らむ）
+                1.0f, 1.05f, 
+                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f, // 画像の中心を軸にする
+                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
+            ).apply {
+                duration = 3000 // 3秒かけて吸う
+                repeatCount = android.view.animation.Animation.INFINITE // 無限ループ
+                repeatMode = android.view.animation.Animation.REVERSE // 3秒かけて吐く（逆再生）
+                interpolator = android.view.animation.AccelerateDecelerateInterpolator() // 動きを滑らかに
+            }
+            startAnimation(breathing)
+            // --- ★ここまで ---
             isClickable = true
             setOnClickListener { playSound() }
         }
