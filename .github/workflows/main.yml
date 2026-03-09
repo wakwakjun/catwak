@@ -23,13 +23,17 @@ jobs:
 
       - name: Convert Images to WebP
         run: |
-          # 拡張子の前のドットを残さず、正しくリネームして変換するように修正
-          # (例: image.png -> image.webp)
-          find app/src/main/res/ -type f \( -name "*.png" -o -name "*.jpg" \) -exec sh -c '
-            original="$1"
-            base="${original%.*}"
-            cwebp -q 75 "$original" -o "$base.webp" && rm "$original"
-          ' _ {} \; || true
+          # 拡張子を取り除いてから .webp を付与する、より安全なスクリプト
+          for file in $(find app/src/main/res/ -type f \( -name "*.png" -o -name "*.jpg" \)); do
+            # 拡張子を除いたベース名を取得 (例: image.png -> image)
+            filename="${file%.*}"
+            # 変換実行 (例: image.png -> image.webp)
+            cwebp -q 75 "$file" -o "$filename.webp"
+            # 変換に成功したら元のファイルを確実に削除
+            if [ -f "$filename.webp" ]; then
+              rm "$file"
+            fi
+          done
           
       # 1. Base64文字列からキーストアファイル(.jks)を復元
       - name: Decode Keystore
