@@ -3,21 +3,49 @@ plugins {
     id 'kotlin-android'
 }
 
-// ★ 変数の定義を一番上に移動しました
 def appName = "supercatapp" 
 def developerName = "myuser"
 
 android {
-    // 変数を定義した後に使用するように修正
     namespace "jp.${developerName}.${appName}"
     compileSdk 35
 
+    // GitHub Actions から渡されるビルド番号を数値として取得
+    def githubRunNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "1"
+    def autoVersionCode = githubRunNumber.toInteger()
+    def autoVersionName = "1.0.${githubRunNumber}"
+
     defaultConfig {
-        applicationId "jp.${developerName}.${appName}"
+        applicationId "jp.myuser.supercatapp"
         minSdk 24
-        targetSdk 35
-        versionCode 11 // 前回のアップロード失敗を踏まえ「2」にしています
-        versionName "7.4"
+        targetSdk 34
+        
+        versionCode autoVersionCode
+        versionName autoVersionName
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            // Actions側の環境変数名と一致させています
+            storeFile file("release-key.jks") 
+            storePassword System.getenv("KEYSTORE_PASSWORD")
+            keyAlias System.getenv("KEY_ALIAS")
+            keyPassword System.getenv("KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            
+            // ★ジャイアントキリング設定：未使用コードとリソースを極限まで削る
+            minifyEnabled true      // 未使用コード削除（サイズ減 & 難読化）
+            shrinkResources true    // 未使用リソース削除（WebP化と合わせて最強）
+            
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
     }
 
     compileOptions {
@@ -28,21 +56,11 @@ android {
         jvmTarget = '17'
     }
 
-    signingConfigs {
-        release {
-            storeFile file("my-release-key.jks")
-            storePassword System.getenv("KEYSTORE_PASSWORD")
-            keyAlias System.getenv("KEY_ALIAS")
-            keyPassword System.getenv("KEY_PASSWORD")
-        }
-    }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
+    // AABを各デバイス向けに最適化して配信する設定
+    bundle {
+        language { enableSplit = true }
+        density { enableSplit = true }
+        abi { enableSplit = true }
     }
 }
 
