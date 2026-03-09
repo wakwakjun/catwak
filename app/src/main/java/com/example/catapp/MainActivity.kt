@@ -2,6 +2,7 @@ package jp.myuser.supercatapp
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.Gravity
@@ -19,7 +20,20 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    // --- メイン画面（猫を表示する画面） ---
+    // --- 共通機能：アプリ終了ボタンを作成 ---
+    private fun createExitButton(): TextView {
+        return TextView(this).apply {
+            text = "✕"
+            setTextColor(Color.WHITE)
+            textSize = 24f
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#44000000")) // 半透明の黒
+            setPadding(30, 20, 30, 20)
+            setOnClickListener { finish() } // アプリを終了
+        }
+    }
+
+    // --- メイン画面 ---
     private fun showMainScreen() {
         val rootLayout = FrameLayout(this)
         rootLayout.setBackgroundColor(Color.BLACK)
@@ -33,12 +47,10 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putString("last_date", todayStr).putInt("cat_num", catNum).apply()
         }
         
-        // 起動のたびにランダムでポーズを選択
         val currentStatus = listOf("sleep", "eat", "play").random()
-        // コレクション保存
         prefs.edit().putBoolean("seen_cat${catNum}_$currentStatus", true).apply()
 
-        // 1. 猫の画像（背景全体）
+        // 1. 猫の画像
         val imageView = ImageView(this).apply {
             val imageResId = resources.getIdentifier("cat${catNum}_$currentStatus", "drawable", packageName)
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
@@ -48,21 +60,19 @@ class MainActivity : AppCompatActivity() {
         }
         rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
-        // 2. 猫度ボタンのコンテナ（左上に配置）
-        val buttonContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(30, 30, 30, 30)
-            isClickable = true
-            isFocusable = true
+        // 2. 猫度ボタン（タッチ範囲を拡大し、見た目を改善）
+        val buttonContainer = FrameLayout(this).apply {
+            setPadding(20, 20, 20, 20)
             setOnClickListener { showDegreeScreen() }
         }
         
         val catDegreeBtn = TextView(this).apply {
             text = "● 猫度を確認 >"
             setTextColor(Color.YELLOW)
-            textSize = 20f
-            setBackgroundColor(Color.parseColor("#88000000")) // 視認性のため少し濃く
-            setPadding(25, 15, 25, 15)
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setBackgroundColor(Color.parseColor("#AA000000")) // 濃いめの背景で視覚化
+            setPadding(40, 30, 40, 30) // 内側の余白を増やしてタッチしやすく
         }
         buttonContainer.addView(catDegreeBtn)
         
@@ -71,12 +81,23 @@ class MainActivity : AppCompatActivity() {
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            topMargin = 40
-            leftMargin = 40
+            topMargin = 30
+            leftMargin = 30
         }
         rootLayout.addView(buttonContainer, btnParams)
 
-        // 3. 下部テキスト（曜日と状態）
+        // 3. 終了ボタン（右上に配置）
+        val exitBtnParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            topMargin = 30
+            rightMargin = 30
+        }
+        rootLayout.addView(createExitButton(), exitBtnParams)
+
+        // 4. 下部テキスト
         val statusJP = when(currentStatus) { "sleep" -> "お休み中" "eat" -> "お食事中" else -> "お遊び中" }
         val dayOfWeek = SimpleDateFormat("EEEE", Locale.JAPANESE).format(Date())
         val textView = TextView(this).apply {
@@ -97,12 +118,14 @@ class MainActivity : AppCompatActivity() {
         setContentView(rootLayout)
     }
 
-    // --- 猫度画面（達成度グラフ） ---
+    // --- 猫度画面 ---
     private fun showDegreeScreen() {
+        val rootLayout = FrameLayout(this) // 重ね合わせのためにFrameLayoutを使用
+
         val degreeLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#1A1A1A"))
+            setBackgroundColor(Color.parseColor("#121212"))
             setPadding(40, 40, 40, 40)
         }
 
@@ -116,38 +139,49 @@ class MainActivity : AppCompatActivity() {
         val progressPercent = (seenCount.toFloat() / 21f * 100).toInt()
 
         val titleView = TextView(this).apply {
-            text = "コンプリートまであと少し！"
+            text = "Cat Collection Degree"
             setTextColor(Color.WHITE)
-            textSize = 24f
-            setPadding(0, 0, 0, 100)
+            textSize = 22f
+            setPadding(0, 0, 0, 80)
+            setTypeface(null, Typeface.BOLD)
         }
         degreeLayout.addView(titleView)
 
-        // 円形グラフの表示（より安定したスタイルを使用）
-        val circleProgress = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
-            isIndeterminate = false
-            max = 100
+        val catGraph = CatDegreeView(this).apply {
             progress = progressPercent
-            scaleX = 3.0f // サイズをさらに大きく
-            scaleY = 3.0f
         }
-        degreeLayout.addView(circleProgress)
+        val graphParams = LinearLayout.LayoutParams(600, 600)
+        degreeLayout.addView(catGraph, graphParams)
 
         val percentView = TextView(this).apply {
-            text = "猫度：$progressPercent %"
+            text = "$progressPercent%"
             setTextColor(Color.YELLOW)
-            textSize = 36f
-            setPadding(0, 150, 0, 80)
+            textSize = 48f
+            setPadding(0, 60, 0, 60)
+            setTypeface(Typeface.MONOSPACE)
         }
         degreeLayout.addView(percentView)
 
         val backBtn = Button(this).apply {
-            text = "戻る"
+            text = "Back to Home"
             setOnClickListener { showMainScreen() }
         }
         degreeLayout.addView(backBtn)
 
-        setContentView(degreeLayout)
+        rootLayout.addView(degreeLayout)
+
+        // 終了ボタン（右上）
+        val exitBtnParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            topMargin = 30
+            rightMargin = 30
+        }
+        rootLayout.addView(createExitButton(), exitBtnParams)
+
+        setContentView(rootLayout)
     }
 
     private fun playSound() {
@@ -165,5 +199,43 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer?.release()
+    }
+}
+
+// --- カスタム描画クラス（変更なし） ---
+class CatDegreeView(context: Context) : View(context) {
+    var progress: Int = 0
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeCap = android.graphics.Paint.Cap.ROUND
+        strokeWidth = 60f
+    }
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val center = width / 2f
+        val radius = (width / 2f) - 50f
+        val rect = android.graphics.RectF(center - radius, center - radius, center + radius, center + radius)
+
+        paint.shader = null
+        paint.color = Color.parseColor("#333333")
+        canvas.drawCircle(center, center, radius, paint)
+
+        val gradient = android.graphics.SweepGradient(center, center, 
+            intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
+        paint.shader = gradient
+        
+        canvas.save()
+        canvas.rotate(-90f, center, center)
+        val sweepAngle = (progress / 100f) * 360f
+        canvas.drawArc(rect, 0f, sweepAngle, false, paint)
+        canvas.restore()
+        
+        paint.shader = null
     }
 }
