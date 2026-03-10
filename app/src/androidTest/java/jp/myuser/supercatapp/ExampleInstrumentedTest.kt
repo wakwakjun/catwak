@@ -7,17 +7,16 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
-class ScreenshotTest {
+class ExampleInstrumentedTest {
     @get:Rule
     val activityRule = ActivityScenarioRule(MainActivity::class.java)
 
     @Test
     fun takeScreenshot() {
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        // 画面が安定するまで少し待つ
-        Thread.sleep(2000)
+        Thread.sleep(3000)
         
-        // GitHub Actionsの保存先にスクリーンショットを撮る
+        // 確実に保存できる場所を指定
         val file = File("/sdcard/main_screen.png")
         device.takeScreenshot(file)
     }
