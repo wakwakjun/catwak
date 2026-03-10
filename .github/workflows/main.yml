@@ -73,10 +73,12 @@ jobs:
       - name: run debug tests for screenshot
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 29        # ★ 34より軽量な29（Android 10）に変更して起動を速める
+          api-level: 30
           target: google_apis
           arch: x86_64
-          force-avd-creation: false
+          # 待機時間を大幅に伸ばす（15分）
+          emulator-boot-timeout: 900
+          # 起動を確実にするためのオプション
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: ./gradlew connectedCheck
