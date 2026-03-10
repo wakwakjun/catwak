@@ -48,7 +48,9 @@ class MainActivity : AppCompatActivity() {
 
     // --- メイン画面 ---
     private fun showMainScreen() {
-        val rootLayout = FrameLayout(this)
+        val rootLayout = FrameLayout(this).apply {
+            contentDescription = "main_screen" // ★ロボット用の目印
+        }
         rootLayout.setBackgroundColor(Color.BLACK)
 
         val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
