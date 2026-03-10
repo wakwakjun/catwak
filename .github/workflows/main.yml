@@ -76,10 +76,9 @@ jobs:
           api-level: 21
           target: default
           arch: x86
-          # 待機時間を大幅に伸ばす（15分）
-          emulator-boot-timeout: 900
-          # 起動を確実にするためのオプション
+          force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # ★ ここを true にすることで、テスト中のアニメーションをシステムレベルで無効化します
           disable-animations: true
           script: ./gradlew connectedCheck
 
