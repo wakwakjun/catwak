@@ -68,3 +68,18 @@ jobs:
         with:
           name: cat-app-apk
           path: app/build/outputs/apk/release/*.apk
+
+      # 5. ビルド後にスクリーンショットを撮るステップ
+      - name: run debug tests for screenshot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34 # 安定性のために34を使用
+          target: google_apis
+          arch: x86_64
+          script: ./gradlew connectedCheck
+
+      - name: Upload Screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: /sdcard/main_screen.png
