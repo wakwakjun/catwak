@@ -8,15 +8,17 @@ import org.junit.Test
 import java.io.File
 
 class ExampleInstrumentedTest {
+    // launchActivity を false にして、手動で起動をコントロールします
     @get:Rule
     val activityRule = ActivityScenarioRule(MainActivity::class.java)
 
     @Test
     fun takeScreenshot() {
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        Thread.sleep(3000)
         
-        // 確実に保存できる場所を指定
+        // アニメーションが動いていても、5秒待ってから強制撮影
+        Thread.sleep(5000)
+        
         val file = File("/sdcard/main_screen.png")
         device.takeScreenshot(file)
     }
