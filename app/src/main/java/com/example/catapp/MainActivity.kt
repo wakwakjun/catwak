@@ -20,14 +20,17 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    // --- 終了ボタン：タッチ範囲を80dpに拡大 ---
+    // --- 終了ボタン：タッチ範囲を大幅拡大 ---
     private fun createExitButton(): View {
         val touchArea = FrameLayout(this).apply {
             setPadding(80, 80, 80, 80) 
             setOnClickListener { finish() }
             isClickable = true
             isFocusable = true
-            setBackgroundResource(android.R.resource.selectableItemBackgroundBorderless)
+            // エラーの原因だった箇所を最も安全な書き方に修正
+            val outValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
         }
 
         val xText = TextView(this).apply {
@@ -44,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showMainScreen() {
-        // --- 1. 時間とステータスの判定 ---
+        // 1. 時間とステータスの判定
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = currentHour >= 22 || currentHour < 6
 
@@ -62,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         
         prefs.edit().putBoolean("seen_cat${catNum}_$currentStatus", true).apply()
 
-        // --- 2. レイアウト構築 ---
+        // 2. レイアウト構築
         val rootLayout = FrameLayout(this).apply {
             contentDescription = "main_screen"
             setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
@@ -78,7 +81,7 @@ class MainActivity : AppCompatActivity() {
                 setColorFilter(Color.parseColor("#99BBBBBB"), android.graphics.PorterDuff.Mode.MULTIPLY)
             }
 
-            // アニメーション
+            // アニメーション（テスト中はオフ）
             val isTesting = try { Class.forName("androidx.test.espresso.Espresso"); true } catch (e: Exception) { false }
             if (!isTesting) {
                 val breathing = android.view.animation.ScaleAnimation(
@@ -117,7 +120,10 @@ class MainActivity : AppCompatActivity() {
             setPadding(60, 60, 60, 60)
             setOnClickListener { showDegreeScreen() }
             isClickable = true
-            setBackgroundResource(android.R.resource.selectableItemBackgroundBorderless)
+            // 波紋エフェクト
+            val outValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
         }
         
         val catDegreeBtn = TextView(this).apply {
@@ -139,7 +145,7 @@ class MainActivity : AppCompatActivity() {
         }
         rootLayout.addView(buttonContainer, btnParams)
 
-        // 3. 終了ボタン
+        // 3. 終了ボタンの配置
         val exitBtnParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
@@ -216,7 +222,6 @@ class MainActivity : AppCompatActivity() {
 
         rootLayout.addView(degreeLayout)
         
-        // 画面切り替え後も右上に終了ボタンを置く
         val exitBtnParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
