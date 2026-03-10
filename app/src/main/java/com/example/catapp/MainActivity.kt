@@ -70,22 +70,41 @@ class MainActivity : AppCompatActivity() {
             val imageResId = resources.getIdentifier("cat${catNum}_$currentStatus", "drawable", packageName)
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            // --- ★ここから「呼吸」の魔法を書き足し ---
+            
+            // --- 「呼吸」アニメーション ---
             val breathing = android.view.animation.ScaleAnimation(
-                1.0f, 1.05f, // 1.0倍から1.05倍へ（わずかに膨らむ）
                 1.0f, 1.05f, 
-                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f, // 画像の中心を軸にする
+                1.0f, 1.05f, 
+                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
                 android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
             ).apply {
-                duration = 3000 // 3秒かけて吸う
-                repeatCount = android.view.animation.Animation.INFINITE // 無限ループ
-                repeatMode = android.view.animation.Animation.REVERSE // 3秒かけて吐く（逆再生）
-                interpolator = android.view.animation.AccelerateDecelerateInterpolator() // 動きを滑らかに
+                duration = 3000
+                repeatCount = android.view.animation.Animation.INFINITE
+                repeatMode = android.view.animation.Animation.REVERSE
+                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
             }
             startAnimation(breathing)
-            // --- ★ここまで ---
-            isClickable = true
-            setOnClickListener { playSound() }
+
+            // --- ★ここが重要：クリック時の動作を一つにまとめます ---
+            setOnClickListener { 
+                playSound() // 鳴き声を出す
+                
+                // 親密度アップの処理
+                val loveCount = prefs.getInt("love_count", 0) + 1
+                prefs.edit().putInt("love_count", loveCount).apply()
+                
+                // 5回ごとにスペシャルリアクション
+                if (loveCount % 5 == 0) {
+                    val jump = android.view.animation.TranslateAnimation(0f, 0f, 0f, -20f).apply {
+                        duration = 100
+                        repeatCount = 1
+                        repeatMode = android.view.animation.Animation.REVERSE
+                    }
+                    startAnimation(jump)
+                    Toast.makeText(context, "猫ちゃんが喜んでいます！ (Love: $loveCount)", Toast.LENGTH_SHORT).show()
+                }
+            }
+            // isClickable = true は setOnClickListener を使うと自動で true になるので省略可能です
         }
         rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
