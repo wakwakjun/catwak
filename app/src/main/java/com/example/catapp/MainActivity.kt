@@ -20,21 +20,23 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
+    // --- 終了ボタン：タッチ範囲を80dpに拡大 ---
     private fun createExitButton(): View {
         val touchArea = FrameLayout(this).apply {
-            setPadding(40, 40, 40, 40) 
+            setPadding(80, 80, 80, 80) 
             setOnClickListener { finish() }
             isClickable = true
             isFocusable = true
+            setBackgroundResource(android.R.resource.selectableItemBackgroundBorderless)
         }
 
         val xText = TextView(this).apply {
             text = "✕"
             setTextColor(Color.WHITE)
-            textSize = 22f
+            textSize = 24f 
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#88000000")) 
-            setPadding(20, 10, 20, 10)
+            setBackgroundColor(Color.parseColor("#AA000000")) 
+            setPadding(30, 15, 30, 15) 
         }
 
         touchArea.addView(xText)
@@ -55,7 +57,6 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putString("last_date", todayStr).putInt("cat_num", catNum).apply()
         }
         
-        // 夜間は強制的に「sleep」、それ以外はランダム
         val randomStatus = listOf("sleep", "eat", "play").random()
         val currentStatus = if (isNight) "sleep" else randomStatus
         
@@ -64,7 +65,6 @@ class MainActivity : AppCompatActivity() {
         // --- 2. レイアウト構築 ---
         val rootLayout = FrameLayout(this).apply {
             contentDescription = "main_screen"
-            // 夜間はさらに深い紺色にする
             setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
         }
 
@@ -74,12 +74,11 @@ class MainActivity : AppCompatActivity() {
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             
-            // 夜間は画像を少し暗くして目に優しくする
             if (isNight) {
                 setColorFilter(Color.parseColor("#99BBBBBB"), android.graphics.PorterDuff.Mode.MULTIPLY)
             }
 
-            // テスト中でなければアニメーション開始
+            // アニメーション
             val isTesting = try { Class.forName("androidx.test.espresso.Espresso"); true } catch (e: Exception) { false }
             if (!isTesting) {
                 val breathing = android.view.animation.ScaleAnimation(
@@ -87,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                     android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
                     android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
                 ).apply {
-                    duration = 3500 // 夜は少しゆっくり呼吸
+                    duration = 3500
                     repeatCount = android.view.animation.Animation.INFINITE
                     repeatMode = android.view.animation.Animation.REVERSE
                     interpolator = android.view.animation.AccelerateDecelerateInterpolator()
@@ -115,7 +114,6 @@ class MainActivity : AppCompatActivity() {
 
         // 2. 猫度ボタン
         val buttonContainer = FrameLayout(this).apply {
-            // ここもPaddingを60まで広げ、ボタンの周囲も反応するようにします
             setPadding(60, 60, 60, 60)
             setOnClickListener { showDegreeScreen() }
             isClickable = true
@@ -125,40 +123,31 @@ class MainActivity : AppCompatActivity() {
         val catDegreeBtn = TextView(this).apply {
             text = "● 猫度を確認 >"
             setTextColor(if (isNight) Color.GRAY else Color.YELLOW)
-            textSize = 20f // 読みやすく少しアップ
+            textSize = 20f
             setTypeface(null, Typeface.BOLD)
             setBackgroundColor(Color.parseColor("#AA000000"))
-            setPadding(50, 40, 50, 40) // 内側の余白も増やして「太らせる」
+            setPadding(50, 40, 50, 40)
         }
         buttonContainer.addView(catDegreeBtn)
-        rootLayout.addView(buttonContainer, FrameLayout.LayoutParams(
+        
+        val btnParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply { gravity = Gravity.TOP or Gravity.START; topMargin = 30; leftMargin = 30 })
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            topMargin = 30
+            leftMargin = 30
+        }
+        rootLayout.addView(buttonContainer, btnParams)
 
         // 3. 終了ボタン
-        private fun createExitButton(): View {
-        val touchArea = FrameLayout(this).apply {
-            // Paddingを80に広げ、画面の隅を適当に叩いても反応するようにします
-            setPadding(80, 80, 80, 80) 
-            setOnClickListener { finish() }
-            isClickable = true
-            isFocusable = true
-            // タップ時に波紋が出るように（任意）
-            setBackgroundResource(android.R.resource.selectableItemBackgroundBorderless)
+        val exitBtnParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            topMargin = 30
+            rightMargin = 30
         }
-
-        val xText = TextView(this).apply {
-            text = "✕"
-            setTextColor(Color.WHITE)
-            textSize = 24f // 少し大きく
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#AA000000")) 
-            setPadding(30, 15, 30, 15) // 見た目のボタンも少し大きく
-        }
-
-        touchArea.addView(xText)
-        return touchArea
-    }
+        rootLayout.addView(createExitButton(), exitBtnParams)
 
         // 4. 下部テキスト
         val statusJP = when(currentStatus) { "sleep" -> "お休み中" "eat" -> "お食事中" else -> "お遊び中" }
@@ -169,9 +158,13 @@ class MainActivity : AppCompatActivity() {
             textSize = 18f
             gravity = Gravity.CENTER
         }
-        rootLayout.addView(textView, FrameLayout.LayoutParams(
+        val textParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; setMargins(0, 0, 0, 120) })
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            setMargins(0, 0, 0, 120)
+        }
+        rootLayout.addView(textView, textParams)
 
         setContentView(rootLayout)
     }
@@ -185,4 +178,104 @@ class MainActivity : AppCompatActivity() {
             setPadding(40, 40, 40, 40)
         }
 
-        val prefs = getSharedPreferences("CatPrefs", Context
+        val prefs = getSharedPreferences("CatPrefs", Context.MODE_PRIVATE)
+        var seenCount = 0
+        for (i in 1..7) {
+            for (s in listOf("sleep", "eat", "play")) {
+                if (prefs.getBoolean("seen_cat${i}_$s", false)) seenCount++
+            }
+        }
+        val progressPercent = (seenCount.toFloat() / 21f * 100).toInt()
+
+        val titleView = TextView(this).apply {
+            text = "Cat Collection Degree"
+            setTextColor(Color.WHITE)
+            textSize = 22f
+            setPadding(0, 0, 0, 80)
+            setTypeface(null, Typeface.BOLD)
+        }
+        degreeLayout.addView(titleView)
+
+        val catGraph = CatDegreeView(this).apply { progress = progressPercent }
+        degreeLayout.addView(catGraph, LinearLayout.LayoutParams(600, 600))
+
+        val percentView = TextView(this).apply {
+            text = "$progressPercent%"
+            setTextColor(Color.YELLOW)
+            textSize = 48f
+            setPadding(0, 60, 0, 60)
+            setTypeface(Typeface.MONOSPACE)
+        }
+        degreeLayout.addView(percentView)
+
+        val backBtn = Button(this).apply {
+            text = "Back to Home"
+            setOnClickListener { showMainScreen() }
+        }
+        degreeLayout.addView(backBtn)
+
+        rootLayout.addView(degreeLayout)
+        
+        // 画面切り替え後も右上に終了ボタンを置く
+        val exitBtnParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            topMargin = 30
+            rightMargin = 30
+        }
+        rootLayout.addView(createExitButton(), exitBtnParams)
+
+        setContentView(rootLayout)
+    }
+
+    private fun playSound() {
+        try {
+            mediaPlayer?.release()
+            val resId = resources.getIdentifier("meow", "raw", packageName)
+            if (resId != 0) {
+                mediaPlayer = MediaPlayer.create(this, resId)
+                mediaPlayer?.start()
+                mediaPlayer?.setOnCompletionListener { it.release() }
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.release()
+    }
+}
+
+class CatDegreeView(context: Context) : View(context) {
+    var progress: Int = 0
+        set(value) { field = value; invalidate() }
+
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeCap = android.graphics.Paint.Cap.ROUND
+        strokeWidth = 60f
+    }
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val center = width / 2f
+        val radius = (width / 2f) - 50f
+        val rect = android.graphics.RectF(center - radius, center - radius, center + radius, center + radius)
+        
+        paint.shader = null
+        paint.color = Color.parseColor("#333333")
+        canvas.drawCircle(center, center, radius, paint)
+
+        val gradient = android.graphics.SweepGradient(center, center, 
+            intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
+        paint.shader = gradient
+        
+        canvas.save()
+        canvas.rotate(-90f, center, center)
+        canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
+        canvas.restore()
+        
+        paint.shader = null
+    }
+}
