@@ -69,13 +69,16 @@ jobs:
           name: cat-app-apk
           path: app/build/outputs/apk/release/*.apk
 
-      # 5. ビルド後にスクリーンショットを撮るステップ
+      # 5. ビルド後にスクリーンショットを撮るステップ（安定化設定） ---
       - name: run debug tests for screenshot
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34 # 安定性のために34を使用
+          api-level: 29        # ★ 34より軽量な29（Android 10）に変更して起動を速める
           target: google_apis
           arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
           script: ./gradlew connectedCheck
 
       - name: Upload Screenshots
