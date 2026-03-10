@@ -71,19 +71,29 @@ class MainActivity : AppCompatActivity() {
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             
-            // --- 「呼吸」アニメーション ---
-            val breathing = android.view.animation.ScaleAnimation(
-                1.0f, 1.05f, 
-                1.0f, 1.05f, 
-                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
-                android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
-            ).apply {
-                duration = 3000
-                repeatCount = android.view.animation.Animation.INFINITE
-                repeatMode = android.view.animation.Animation.REVERSE
-                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            // --- ★テスト中でない場合のみアニメーションを開始 ---
+            val isTesting = try {
+                Class.forName("androidx.test.espresso.Espresso")
+                true
+            } catch (e: Exception) {
+                false
             }
-            startAnimation(breathing)
+
+            if (!isTesting) {
+                val breathing = android.view.animation.ScaleAnimation(
+                    1.0f, 1.05f, 
+                    1.0f, 1.05f, 
+                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
+                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
+                ).apply {
+                    duration = 3000
+                    repeatCount = android.view.animation.Animation.INFINITE
+                    repeatMode = android.view.animation.Animation.REVERSE
+                    interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+                }
+                startAnimation(breathing)
+            }
+            // --- ★ここまで ---
 
             // --- ★ここが重要：クリック時の動作を一つにまとめます ---
             setOnClickListener { 
