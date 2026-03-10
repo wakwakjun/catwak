@@ -73,9 +73,9 @@ jobs:
       - name: run debug tests for screenshot
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
-          target: google_apis
-          arch: x86_64
+          api-level: 21
+          target: default
+          arch: x86
           # 待機時間を大幅に伸ばす（15分）
           emulator-boot-timeout: 900
           # 起動を確実にするためのオプション
