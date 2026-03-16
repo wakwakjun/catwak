@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.TypedValue // ★追加：波紋エフェクトに必要
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -18,17 +19,18 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showMainScreen()
+        // 年齢信号の確認（将来的に実装）
+        checkUserAgeSignal()
     }
 
-    // --- 終了ボタン：タッチ範囲を大幅拡大 ---
     private fun createExitButton(): View {
         val touchArea = FrameLayout(this).apply {
             setPadding(80, 80, 80, 80) 
             setOnClickListener { finish() }
             isClickable = true
             isFocusable = true
-            // エラーの原因だった箇所を最も安全な書き方に修正
-            val outValue = android.util.TypedValue()
+            
+            val outValue = TypedValue()
             theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
         }
@@ -47,7 +49,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showMainScreen() {
-        // 1. 時間とステータスの判定
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = currentHour >= 22 || currentHour < 6
 
@@ -65,13 +66,11 @@ class MainActivity : AppCompatActivity() {
         
         prefs.edit().putBoolean("seen_cat${catNum}_$currentStatus", true).apply()
 
-        // 2. レイアウト構築
         val rootLayout = FrameLayout(this).apply {
             contentDescription = "main_screen"
             setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
         }
 
-        // 1. 猫の画像
         val imageView = ImageView(this).apply {
             val imageResId = resources.getIdentifier("cat${catNum}_$currentStatus", "drawable", packageName)
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
@@ -81,7 +80,6 @@ class MainActivity : AppCompatActivity() {
                 setColorFilter(Color.parseColor("#99BBBBBB"), android.graphics.PorterDuff.Mode.MULTIPLY)
             }
 
-            // アニメーション（テスト中はオフ）
             val isTesting = try { Class.forName("androidx.test.espresso.Espresso"); true } catch (e: Exception) { false }
             if (!isTesting) {
                 val breathing = android.view.animation.ScaleAnimation(
@@ -109,19 +107,17 @@ class MainActivity : AppCompatActivity() {
                         repeatMode = android.view.animation.Animation.REVERSE
                     }
                     startAnimation(jump)
-                    Toast.makeText(context, "猫ちゃんが喜んでいます！ (Love: $loveCount)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Love: $loveCount", Toast.LENGTH_SHORT).show()
                 }
             }
         }
         rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
-        // 2. 猫度ボタン
         val buttonContainer = FrameLayout(this).apply {
             setPadding(60, 60, 60, 60)
             setOnClickListener { showDegreeScreen() }
             isClickable = true
-            // 波紋エフェクト
-            val outValue = android.util.TypedValue()
+            val outValue = TypedValue()
             theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
         }
@@ -135,42 +131,25 @@ class MainActivity : AppCompatActivity() {
             setPadding(50, 40, 50, 40)
         }
         buttonContainer.addView(catDegreeBtn)
-        
-        val btnParams = FrameLayout.LayoutParams(
+        rootLayout.addView(buttonContainer, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            topMargin = 30
-            leftMargin = 30
-        }
-        rootLayout.addView(buttonContainer, btnParams)
+        ).apply { gravity = Gravity.TOP or Gravity.START; topMargin = 30; leftMargin = 30 })
 
-        // 3. 終了ボタンの配置
-        val exitBtnParams = FrameLayout.LayoutParams(
+        rootLayout.addView(createExitButton(), FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.END
-            topMargin = 30
-            rightMargin = 30
-        }
-        rootLayout.addView(createExitButton(), exitBtnParams)
+        ).apply { gravity = Gravity.TOP or Gravity.END; topMargin = 30; rightMargin = 30 })
 
-        // 4. 下部テキスト
-        val statusJP = when(currentStatus) { "sleep" -> "お休み中" "eat" -> "お食事中" else -> "お遊び中" }
-        val dayOfWeek = SimpleDateFormat("EEEE", Locale.JAPANESE).format(Date())
+        val statusJP = when(currentStatus) { "sleep" -> "Zzz..." "eat" -> "Yum!" else -> "Play!" } // ★万国共通の擬音へ
+        val dayOfWeek = SimpleDateFormat("EEEE", Locale.getDefault()).format(Date()) // ★ブラジル対応：getDefault
         val textView = TextView(this).apply {
-            text = "今日は $dayOfWeek\n猫ちゃんは $statusJP です"
+            text = "$dayOfWeek\n$statusJP"
             setTextColor(if (isNight) Color.LTGRAY else Color.WHITE)
             textSize = 18f
             gravity = Gravity.CENTER
         }
-        val textParams = FrameLayout.LayoutParams(
+        rootLayout.addView(textView, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            setMargins(0, 0, 0, 120)
-        }
-        rootLayout.addView(textView, textParams)
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; setMargins(0, 0, 0, 120) })
 
         setContentView(rootLayout)
     }
@@ -194,7 +173,7 @@ class MainActivity : AppCompatActivity() {
         val progressPercent = (seenCount.toFloat() / 21f * 100).toInt()
 
         val titleView = TextView(this).apply {
-            text = "Cat Collection Degree"
+            text = "Collection"
             setTextColor(Color.WHITE)
             textSize = 22f
             setPadding(0, 0, 0, 80)
@@ -215,21 +194,15 @@ class MainActivity : AppCompatActivity() {
         degreeLayout.addView(percentView)
 
         val backBtn = Button(this).apply {
-            text = "Back to Home"
+            text = "Back"
             setOnClickListener { showMainScreen() }
         }
         degreeLayout.addView(backBtn)
 
         rootLayout.addView(degreeLayout)
-        
-        val exitBtnParams = FrameLayout.LayoutParams(
+        rootLayout.addView(createExitButton(), FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.END
-            topMargin = 30
-            rightMargin = 30
-        }
-        rootLayout.addView(createExitButton(), exitBtnParams)
+        ).apply { gravity = Gravity.TOP or Gravity.END; topMargin = 30; rightMargin = 30 })
 
         setContentView(rootLayout)
     }
@@ -244,6 +217,10 @@ class MainActivity : AppCompatActivity() {
                 mediaPlayer?.setOnCompletionListener { it.release() }
             }
         } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun checkUserAgeSignal() {
+        // 将来的なAPI統合用の器
     }
 
     override fun onDestroy() {
@@ -267,20 +244,16 @@ class CatDegreeView(context: Context) : View(context) {
         val center = width / 2f
         val radius = (width / 2f) - 50f
         val rect = android.graphics.RectF(center - radius, center - radius, center + radius, center + radius)
-        
         paint.shader = null
         paint.color = Color.parseColor("#333333")
         canvas.drawCircle(center, center, radius, paint)
-
         val gradient = android.graphics.SweepGradient(center, center, 
             intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
         paint.shader = gradient
-        
         canvas.save()
         canvas.rotate(-90f, center, center)
         canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
         canvas.restore()
-        
         paint.shader = null
     }
 }
