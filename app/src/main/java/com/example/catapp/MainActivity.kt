@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.animation.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import java.text.SimpleDateFormat
@@ -21,14 +22,11 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    // --- 共通機能：巨大な当たり判定を持つ終了ボタン ---
     private fun createExitButton(): View {
         return FrameLayout(this).apply {
-            setPadding(80, 80, 80, 80) // 80dpの巨大な反応範囲
+            setPadding(80, 80, 80, 80)
             setOnClickListener { finish() }
             isClickable = true
-            
-            // タップ時の波紋エフェクト設定
             val outValue = TypedValue()
             theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
@@ -45,11 +43,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showMainScreen() {
-        // 1. 環境判定（ナイトモード：22時〜6時）
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = currentHour >= 22 || currentHour < 6
-
-        // 2. データ管理（SharedPreferences）
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val todayStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         
@@ -62,14 +57,12 @@ class MainActivity : AppCompatActivity() {
         val randomStatus = listOf("sleep", "eat", "play").random()
         val currentStatus = if (isNight) "sleep" else randomStatus
         
-        // 3. レイアウト（背景色切り替え）
         val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
         }
 
-        // 4. メイン画像（呼吸アニメーション付き）
         val imageView = ImageView(this).apply {
-            val resName = "cat${animalNum}_$currentStatus" // ★ここを parrot に変えればインコ版！
+            val resName = "cat${animalNum}_$currentStatus"
             val imageResId = resources.getIdentifier(resName, "drawable", packageName)
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
@@ -79,33 +72,53 @@ class MainActivity : AppCompatActivity() {
             // 呼吸アニメーション
             val isTesting = try { Class.forName("androidx.test.espresso.Espresso"); true } catch (e: Exception) { false }
             if (!isTesting) {
-                startAnimation(android.view.animation.ScaleAnimation(
+                startAnimation(ScaleAnimation(
                     1.0f, 1.05f, 1.0f, 1.05f, 
-                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
-                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
+                    Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f
                 ).apply {
                     duration = if (isNight) 4000 else 3000
-                    repeatCount = android.view.animation.Animation.INFINITE
-                    repeatMode = android.view.animation.Animation.REVERSE
-                    interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+                    repeatCount = Animation.INFINITE
+                    repeatMode = Animation.REVERSE
+                    interpolator = AccelerateDecelerateInterpolator()
                 })
             }
 
+            // ★ タップ時のリアクション
             setOnClickListener { 
                 playSound()
-                val love = prefs.getInt("love_count", 0) + 1
-                prefs.edit().putInt("love_count", love).apply()
-                if (love % 5 == 0) {
-                    startAnimation(android.view.animation.TranslateAnimation(0f, 0f, 0f, -20f).apply {
-                        duration = 100; repeatCount = 1; repeatMode = android.view.animation.Animation.REVERSE
+                
+                // ぷるぷるアニメーション
+                val puffUp = AnimationSet(true).apply {
+                    addAnimation(ScaleAnimation(1.0f, 1.1f, 1.0f, 1.1f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply { duration = 100 })
+                    addAnimation(RotateAnimation(-3f, 3f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
+                        duration = 50
+                        repeatCount = 3
+                        repeatMode = Animation.REVERSE
                     })
-                    Toast.makeText(context, "Love: $love", Toast.LENGTH_SHORT).show()
                 }
+                
+                // 親密度ロジック
+                val loveCount = prefs.getInt("love_count", 0) + 1
+                prefs.edit().putInt("love_count", loveCount).apply()
+                
+                // 5回ごとのジャンプ判定
+                if (loveCount % 5 == 0) {
+                    val jump = TranslateAnimation(0f, 0f, 0f, -30f).apply {
+                        duration = 100
+                        repeatCount = 1
+                        repeatMode = Animation.REVERSE
+                    }
+                    // アニメーションを組み合わせて実行
+                    puffUp.addAnimation(jump)
+                    Toast.makeText(context, "Love: $loveCount!", Toast.LENGTH_SHORT).show()
+                }
+                
+                startAnimation(puffUp)
             }
         }
         rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
-        // 5. コレクションボタン（巨大判定 60dp）
+        // コレクションボタン
         val btnContainer = FrameLayout(this).apply {
             setPadding(60, 60, 60, 60)
             setOnClickListener { showCollectionScreen() }
@@ -123,12 +136,10 @@ class MainActivity : AppCompatActivity() {
         })
         rootLayout.addView(btnContainer, FrameLayout.LayoutParams(-2, -2).apply { topMargin = 30; leftMargin = 30 })
 
-        // 6. 終了ボタン（右上に配置）
         rootLayout.addView(createExitButton(), FrameLayout.LayoutParams(-2, -2).apply { 
             gravity = Gravity.TOP or Gravity.END; topMargin = 30; rightMargin = 30 
         })
 
-        // 7. 下部テキスト（ブラジル対応：Locale.getDefault）
         val statusText = when(currentStatus) { "sleep" -> "Zzz..." "eat" -> "Yum!" else -> "Play!" }
         val dayText = SimpleDateFormat("EEEE", Locale.getDefault()).format(Date())
         rootLayout.addView(TextView(this).apply {
@@ -156,7 +167,7 @@ class MainActivity : AppCompatActivity() {
         val progress = (count.toFloat() / 21f * 100).toInt()
 
         layout.addView(TextView(this).apply { text = "Collection"; setTextColor(Color.WHITE); textSize = 22f; setPadding(0,0,0,80) })
-        layout.addView(View(this).apply { /* グラフ描画クラスは下に分離 */ }, LinearLayout.LayoutParams(600, 600))
+        layout.addView(View(this).apply { /* グラフ描画 */ }, LinearLayout.LayoutParams(600, 600))
         layout.addView(TextView(this).apply { text = "$progress%"; setTextColor(Color.YELLOW); textSize = 48f; setPadding(0,60,0,60) })
         layout.addView(Button(this).apply { text = "Back"; setOnClickListener { showMainScreen() } })
 
