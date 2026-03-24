@@ -57,6 +57,9 @@ class MainActivity : AppCompatActivity() {
         val randomStatus = listOf("sleep", "eat", "play").random()
         val currentStatus = if (isNight) "sleep" else randomStatus
         
+        // ★ ここで発見フラグを保存
+        prefs.edit().putBoolean("seen_${animalNum}_$currentStatus", true).apply()
+
         val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
         }
@@ -69,7 +72,6 @@ class MainActivity : AppCompatActivity() {
             
             if (isNight) setColorFilter(Color.parseColor("#99BBBBBB"), android.graphics.PorterDuff.Mode.MULTIPLY)
 
-            // 呼吸アニメーション
             val isTesting = try { Class.forName("androidx.test.espresso.Espresso"); true } catch (e: Exception) { false }
             if (!isTesting) {
                 startAnimation(ScaleAnimation(
@@ -83,11 +85,8 @@ class MainActivity : AppCompatActivity() {
                 })
             }
 
-            // ★ タップ時のリアクション
             setOnClickListener { 
                 playSound()
-                
-                // ぷるぷるアニメーション
                 val puffUp = AnimationSet(true).apply {
                     addAnimation(ScaleAnimation(1.0f, 1.1f, 1.0f, 1.1f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply { duration = 100 })
                     addAnimation(RotateAnimation(-3f, 3f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
@@ -97,28 +96,23 @@ class MainActivity : AppCompatActivity() {
                     })
                 }
                 
-                // 親密度ロジック
                 val loveCount = prefs.getInt("love_count", 0) + 1
                 prefs.edit().putInt("love_count", loveCount).apply()
                 
-                // 5回ごとのジャンプ判定
                 if (loveCount % 5 == 0) {
                     val jump = TranslateAnimation(0f, 0f, 0f, -30f).apply {
                         duration = 100
                         repeatCount = 1
                         repeatMode = Animation.REVERSE
                     }
-                    // アニメーションを組み合わせて実行
                     puffUp.addAnimation(jump)
                     Toast.makeText(context, "Love: $loveCount!", Toast.LENGTH_SHORT).show()
                 }
-                
                 startAnimation(puffUp)
             }
         }
         rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
-        // コレクションボタン
         val btnContainer = FrameLayout(this).apply {
             setPadding(60, 60, 60, 60)
             setOnClickListener { showCollectionScreen() }
@@ -167,7 +161,10 @@ class MainActivity : AppCompatActivity() {
         val progress = (count.toFloat() / 21f * 100).toInt()
 
         layout.addView(TextView(this).apply { text = "Collection"; setTextColor(Color.WHITE); textSize = 22f; setPadding(0,0,0,80) })
-        layout.addView(View(this).apply { /* グラフ描画 */ }, LinearLayout.LayoutParams(600, 600))
+        
+        // ★ progress を渡すように修正
+        layout.addView(CatDegreeView(this).apply { this.progress = progress }, LinearLayout.LayoutParams(600, 600))
+        
         layout.addView(TextView(this).apply { text = "$progress%"; setTextColor(Color.YELLOW); textSize = 48f; setPadding(0,60,0,60) })
         layout.addView(Button(this).apply { text = "Back"; setOnClickListener { showMainScreen() } })
 
@@ -188,4 +185,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() { super.onDestroy(); mediaPlayer?.release() }
+}
+
+// --- カスタム描画クラス（クラスの外に出しました） ---
+class CatDegreeView(context: Context) : View(context) {
+    var progress: Int = 0
+        set(value) { field = value; invalidate() }
+
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeCap = android.graphics.Paint.Cap.ROUND
+        strokeWidth = 60f
+    }
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val center = width / 2f
+        val radius = (width / 2f) - 50f
+        val rect = android.graphics.RectF(center - radius, center - radius, center + radius, center + radius)
+        
+        paint.shader = null
+        paint.color = Color.parseColor("#333333")
+        canvas.drawCircle(center, center, radius, paint)
+
+        val gradient = android.graphics.SweepGradient(center, center, 
+            intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
+        paint.shader = gradient
+        
+        canvas.save()
+        canvas.rotate(-90f, center, center)
+        canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
+        canvas.restore()
+        
+        paint.shader = null
+    }
 }
