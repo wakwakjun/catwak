@@ -1,8 +1,7 @@
 package jp.myuser.supercatapp
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
+import android.graphics.* // ★重要：描画クラスを一括インポート
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.TypedValue
@@ -18,13 +17,13 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var lastTapTime: Long = 0
+    private lateinit var effectLayer: EffectView // ★追加
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showMainScreen()
     }
 
-    // --- 1. 終了ボタン（巨大判定 80dp） ---
     private fun createExitButton(): View {
         return FrameLayout(this).apply {
             setPadding(80, 80, 80, 80)
@@ -43,33 +42,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- 2. メイン画面の構築 ---
     private fun showMainScreen() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
 
-        // --- A. 放置による減少アルゴリズム ---
+        // --- A. 放置減少ロジック ---
         val lastTime = prefs.getLong("last_open_time", now)
         val hoursPassed = (now - lastTime) / (1000 * 60 * 60)
         if (hoursPassed > 0) {
             val currentLove = prefs.getInt("love_count", 0)
             prefs.edit().putInt("love_count", Math.max(0, currentLove - (hoursPassed * 5).toInt())).apply()
-            
-            // 24時間以上放置で猫度（記憶）が1つ消える
-            if (hoursPassed >= 24) {
-                val cats = (1..7).toList().shuffled()
-                val statuses = listOf("sleep", "eat", "play").shuffled()
-                loop@for (i in cats) for (s in statuses) {
-                    if (prefs.getBoolean("seen_${i}_$s", false)) {
-                        prefs.edit().remove("seen_${i}_$s").apply()
-                        break@loop
-                    }
-                }
-            }
         }
         prefs.edit().putLong("last_open_time", now).apply()
 
-        // --- B. 環境・ステータス判定 ---
+        // --- B. 環境判定 ---
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = currentHour >= 22 || currentHour < 6
         val todayStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
@@ -93,26 +79,33 @@ class MainActivity : AppCompatActivity() {
             setImageResource(if (imageResId != 0) imageResId else android.R.drawable.ic_menu_gallery)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             if (isNight) setColorFilter(Color.parseColor("#99BBBBBB"), android.graphics.PorterDuff.Mode.MULTIPLY)
-
-            // 高度なタッチ判定
-            setOnTouchListener { v, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    val currentTime = System.currentTimeMillis()
-                    val isDoubleTap = (currentTime - lastTapTime < 300)
-                    performReaction(v, isDoubleTap)
-                    lastTapTime = currentTime
-                    playSound()
-                    
-                    // 好感度アップ
-                    val love = prefs.getInt("love_count", 0) + 1
-                    prefs.edit().putInt("love_count", love).apply()
-                }
-                true
-            }
         }
-        rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
-        // コレクションボタン
+        // ★ エフェクトレイヤーの初期化
+        effectLayer = EffectView(this)
+
+        // 高度なタッチ判定を rootLayout に設定（画面全体で星を出すため）
+        rootLayout.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                // 星を発生
+                effectLayer.addStar(event.x, event.y)
+                
+                val currentTime = System.currentTimeMillis()
+                val isDoubleTap = (currentTime - lastTapTime < 300)
+                performReaction(imageView, isDoubleTap)
+                lastTapTime = currentTime
+                playSound()
+                
+                val love = prefs.getInt("love_count", 0) + 1
+                prefs.edit().putInt("love_count", love).apply()
+            }
+            true
+        }
+
+        rootLayout.addView(imageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        rootLayout.addView(effectLayer, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT) // ★追加
+
+        // ボタン類
         val btnContainer = FrameLayout(this).apply {
             setPadding(60, 60, 60, 60)
             setOnClickListener { showCollectionScreen() }
@@ -134,15 +127,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(rootLayout)
     }
 
-    // --- 3. リアクション演出アルゴリズム ---
     private fun performReaction(view: View, isBig: Boolean) {
         val animation = if (isBig) {
-            // ダブルタップ：大きく跳ねる
             TranslateAnimation(0f, 0f, 0f, -120f).apply {
                 duration = 150; repeatCount = 1; repeatMode = Animation.REVERSE; interpolator = DecelerateInterpolator()
             }
         } else {
-            // シングルタップ：左右上下に細かく揺らぐ（なでなで感）
             AnimationSet(true).apply {
                 addAnimation(TranslateAnimation(-15f, 15f, -8f, 8f).apply {
                     duration = 60; repeatCount = 3; repeatMode = Animation.REVERSE
@@ -186,21 +176,60 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() { super.onDestroy(); mediaPlayer?.release() }
 }
 
-// --- 4. グラフ描画クラス ---
+// --- エフェクト描画クラス ---
+class EffectView(context: Context) : View(context) {
+    private val stars = mutableListOf<Star>()
+    private val paint = Paint().apply {
+        color = Color.YELLOW
+        style = Paint.Style.FILL
+    }
+
+    class Star(val x: Float, var y: Float, var alpha: Int)
+
+    fun addStar(x: Float, y: Float) {
+        stars.add(Star(x, y, 255))
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val iterator = stars.iterator()
+        while (iterator.hasNext()) {
+            val s = iterator.next()
+            paint.alpha = s.alpha
+            
+            val size = 30f
+            val path = Path().apply {
+                moveTo(s.x, s.y - size)
+                lineTo(s.x + size, s.y)
+                lineTo(s.x, s.y + size)
+                lineTo(s.x - size, s.y)
+                close()
+            }
+            canvas.drawPath(path, paint)
+
+            s.y -= 5f
+            s.alpha -= 15
+            if (s.alpha <= 0) iterator.remove()
+        }
+        if (stars.isNotEmpty()) postInvalidateDelayed(30)
+    }
+}
+
+// --- グラフ描画クラス ---
 class CatDegreeView(context: Context) : View(context) {
     var progress: Int = 0
         set(value) { field = value; invalidate() }
-    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE; strokeCap = android.graphics.Paint.Cap.ROUND; strokeWidth = 60f
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeWidth = 60f
     }
-    override fun onDraw(canvas: android.graphics.Canvas) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val center = width / 2f
         val radius = (width / 2f) - 50f
-        val rect = android.graphics.RectF(center - radius, center - radius, center + radius, center + radius)
+        val rect = RectF(center - radius, center - radius, center + radius, center + radius)
         paint.shader = null; paint.color = Color.parseColor("#333333")
         canvas.drawCircle(center, center, radius, paint)
-        val gradient = android.graphics.SweepGradient(center, center, intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
+        val gradient = SweepGradient(center, center, intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
         paint.shader = gradient
         canvas.save(); canvas.rotate(-90f, center, center)
         canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
