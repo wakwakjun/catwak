@@ -21,7 +21,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // スワイプ検知の設定
         gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                 val diffX = e2.x - (e1?.x ?: 0f)
@@ -151,10 +150,11 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         var count = 0
         for (i in 1..7) for (s in listOf("sleep", "eat", "play")) if (prefs.getBoolean("seen_${i}_$s", false)) count++
-        val progress = (count.toFloat() / 21f * 100).toInt()
         
-        layout.addView(CatDegreeView(this).apply { this.progress = progress }, LinearLayout.LayoutParams(500, 500))
-        layout.addView(TextView(this).apply { text = "$progress%"; setTextColor(Color.YELLOW); textSize = 30f })
+        val currentProgress = (count.toFloat() / 21f * 100).toInt()
+        
+        layout.addView(CatDegreeView(this).apply { progress = currentProgress }, LinearLayout.LayoutParams(500, 500))
+        layout.addView(TextView(this).apply { text = "$currentProgress%"; setTextColor(Color.YELLOW); textSize = 30f })
         layout.addView(TextView(this).apply { text = "Swipe Right to Back →"; setTextColor(Color.GRAY); setPadding(0, 50, 0, 0) })
         
         setContentView(layout)
@@ -177,7 +177,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-// --- エフェクトクラス ---
 class EffectView(context: Context) : View(context) {
     private val stars = mutableListOf<StarData>()
     private val random = Random()
@@ -227,10 +226,12 @@ class EffectView(context: Context) : View(context) {
     }
 }
 
-// --- グラフ表示クラス ---
 class CatDegreeView(context: Context) : View(context) {
     var progress: Int = 0
-        set(value) { field = value; invalidate() }
+        set(value) { 
+            field = value
+            invalidate() 
+        }
     
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeWidth = 60f
@@ -241,6 +242,7 @@ class CatDegreeView(context: Context) : View(context) {
         val center = width / 2f
         val radius = (width / 2f) - 50f
         val rect = RectF(center - radius, center - radius, center + radius, center + radius)
+        
         paint.shader = null; paint.color = Color.parseColor("#333333")
         canvas.drawCircle(center, center, radius, paint)
         
