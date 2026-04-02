@@ -40,22 +40,19 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    // --- スワイプ処理 ---
     private fun onSwipeLeft() {
-        if (currentScreen == 0) showCollectionScreen() // メイン→猫度
-        else if (currentScreen == 1) showMainScreen() // 好感度→メイン
+        if (currentScreen == 0) showCollectionScreen()
+        else if (currentScreen == 1) showMainScreen()
     }
 
     private fun onSwipeRight() {
-        if (currentScreen == 0) showLoveListScreen() // メイン→好感度
-        else if (currentScreen == -1) showMainScreen() // 猫度→メイン
+        if (currentScreen == 0) showLoveListScreen()
+        else if (currentScreen == -1) showMainScreen()
     }
 
-    // --- タップ処理（星の発生） ---
     private fun handleTap(x: Float, y: Float) {
         if (currentScreen != 0) return 
         
-        // 大小さまざまな星を5つほど発生させる
         for (i in 1..5) {
             effectLayer.addStar(x, y)
         }
@@ -72,7 +69,6 @@ class MainActivity : AppCompatActivity() {
         return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event)
     }
 
-    // --- メイン画面 ---
     private fun showMainScreen() {
         currentScreen = 0
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
@@ -97,7 +93,6 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(imageView)
         rootLayout.addView(effectLayer)
         
-        // ガイドテキスト
         rootLayout.addView(TextView(this).apply {
             text = "< 猫度　　好感度 >"
             setTextColor(Color.DKGRAY)
@@ -107,7 +102,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(rootLayout)
     }
 
-    // --- 新機能：好感度一覧画面 ---
     private fun showLoveListScreen() {
         currentScreen = 1
         val layout = LinearLayout(this).apply {
@@ -145,10 +139,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(layout)
     }
 
-    // --- 猫度画面（以前のものを流用） ---
     private fun showCollectionScreen() {
         currentScreen = -1
-        // (以前の showCollectionScreen のロジックをここに配置)
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -168,10 +160,24 @@ class MainActivity : AppCompatActivity() {
         setContentView(layout)
     }
 
-    private fun playSound() { /* 既存の再生処理 */ }
+    private fun playSound() {
+        try {
+            mediaPlayer?.release()
+            val resId = resources.getIdentifier("meow", "raw", packageName)
+            if (resId != 0) {
+                mediaPlayer = MediaPlayer.create(this, resId)
+                mediaPlayer?.start()
+            }
+        } catch (e: Exception) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.release()
+    }
 }
 
-// --- ★進化した星型エフェクトクラス ---
+// --- エフェクトクラス ---
 class EffectView(context: Context) : View(context) {
     private val stars = mutableListOf<StarData>()
     private val random = Random()
@@ -181,10 +187,10 @@ class EffectView(context: Context) : View(context) {
     fun addStar(x: Float, y: Float) {
         val s = StarData(
             x, y, 
-            random.nextFloat() * 40f + 10f, // サイズ 10〜50
+            random.nextFloat() * 40f + 10f,
             255, 
-            (random.nextFloat() - 0.5f) * 20f, // 左右の散らばり
-            (random.nextFloat() - 0.5f) * 20f  // 上下の散らばり
+            (random.nextFloat() - 0.5f) * 20f,
+            (random.nextFloat() - 0.5f) * 20f
         )
         stars.add(s)
         invalidate()
@@ -200,13 +206,12 @@ class EffectView(context: Context) : View(context) {
 
             s.y += s.vy
             s.x += s.vx
-            s.alpha -= 10 // フェードアウト速度
+            s.alpha -= 10
             if (s.alpha <= 0) iterator.remove()
         }
         if (stars.isNotEmpty()) postInvalidateDelayed(30)
     }
 
-    // 数学的に5角星を描く関数
     private fun drawStarShape(canvas: Canvas, cx: Float, cy: Float, radius: Float, paint: Paint) {
         val path = Path()
         val innerRadius = radius / 2.5f
@@ -222,4 +227,29 @@ class EffectView(context: Context) : View(context) {
     }
 }
 
-class CatDegreeView(context: Context) : View(context) { /* 既存のコード */ }
+// --- グラフ表示クラス ---
+class CatDegreeView(context: Context) : View(context) {
+    var progress: Int = 0
+        set(value) { field = value; invalidate() }
+    
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeWidth = 60f
+    }
+    
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val center = width / 2f
+        val radius = (width / 2f) - 50f
+        val rect = RectF(center - radius, center - radius, center + radius, center + radius)
+        paint.shader = null; paint.color = Color.parseColor("#333333")
+        canvas.drawCircle(center, center, radius, paint)
+        
+        val gradient = SweepGradient(center, center, intArrayOf(Color.YELLOW, Color.parseColor("#FF8C00"), Color.YELLOW), null)
+        paint.shader = gradient
+        canvas.save()
+        canvas.rotate(-90f, center, center)
+        canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
+        canvas.restore()
+        paint.shader = null
+    }
+}
