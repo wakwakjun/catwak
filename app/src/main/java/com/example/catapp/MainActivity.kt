@@ -149,12 +149,21 @@ class MainActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         var count = 0
-        for (i in 1..7) for (s in listOf("sleep", "eat", "play")) if (prefs.getBoolean("seen_${i}_$s", false)) count++
+        for (i in 1..7) {
+            for (s in listOf("sleep", "eat", "play")) {
+                if (prefs.getBoolean("seen_${i}_$s", false)) count++
+            }
+        }
         
-        val currentProgress = (count.toFloat() / 21f * 100).toInt()
+        // ★修正点：変数名を完全にユニークな 'calculatedProgress' に変更
+        val calculatedProgress = (count.toFloat() / 21f * 100).toInt()
         
-        layout.addView(CatDegreeView(this).apply { progress = currentProgress }, LinearLayout.LayoutParams(500, 500))
-        layout.addView(TextView(this).apply { text = "$currentProgress%"; setTextColor(Color.YELLOW); textSize = 30f })
+        // ★修正点：CatDegreeViewへの代入を整理
+        val degreeView = CatDegreeView(this)
+        degreeView.progressValue = calculatedProgress
+        layout.addView(degreeView, LinearLayout.LayoutParams(500, 500))
+        
+        layout.addView(TextView(this).apply { text = "$calculatedProgress%"; setTextColor(Color.YELLOW); textSize = 30f })
         layout.addView(TextView(this).apply { text = "Swipe Right to Back →"; setTextColor(Color.GRAY); setPadding(0, 50, 0, 0) })
         
         setContentView(layout)
@@ -227,7 +236,8 @@ class EffectView(context: Context) : View(context) {
 }
 
 class CatDegreeView(context: Context) : View(context) {
-    var progress: Int = 0
+    // ★修正点：プロパティ名を 'progressValue' に変更して競合を回避
+    var progressValue: Int = 0
         set(value) { 
             field = value
             invalidate() 
@@ -250,7 +260,8 @@ class CatDegreeView(context: Context) : View(context) {
         paint.shader = gradient
         canvas.save()
         canvas.rotate(-90f, center, center)
-        canvas.drawArc(rect, 0f, (progress / 100f) * 360f, false, paint)
+        // ★修正点：progressValue を使用
+        canvas.drawArc(rect, 0f, (progressValue / 100f) * 360f, false, paint)
         canvas.restore()
         paint.shader = null
     }
