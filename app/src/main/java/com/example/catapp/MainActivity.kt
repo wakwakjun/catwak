@@ -148,22 +148,22 @@ class MainActivity : AppCompatActivity() {
         layout.addView(TextView(this).apply { text = "Collection"; setTextColor(Color.WHITE); textSize = 22f })
         
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        var count = 0
+        var countFound = 0
         for (i in 1..7) {
             for (s in listOf("sleep", "eat", "play")) {
-                if (prefs.getBoolean("seen_${i}_$s", false)) count++
+                if (prefs.getBoolean("seen_${i}_$s", false)) countFound++
             }
         }
         
-        // ★修正点：変数名を完全にユニークな 'calculatedProgress' に変更
-        val calculatedProgress = (count.toFloat() / 21f * 100).toInt()
+        // ★ 修正：変数名を完全に一意のものに
+        val finalResultPercent = (countFound.toFloat() / 21f * 100).toInt()
         
-        // ★修正点：CatDegreeViewへの代入を整理
-        val degreeView = CatDegreeView(this)
-        degreeView.progressValue = calculatedProgress
-        layout.addView(degreeView, LinearLayout.LayoutParams(500, 500))
+        // ★ 修正：代入をapplyを使わず直接行う
+        val degreeChart = CatDegreeView(this)
+        degreeChart.setNewProgress(finalResultPercent)
+        layout.addView(degreeChart, LinearLayout.LayoutParams(500, 500))
         
-        layout.addView(TextView(this).apply { text = "$calculatedProgress%"; setTextColor(Color.YELLOW); textSize = 30f })
+        layout.addView(TextView(this).apply { text = "$finalResultPercent%"; setTextColor(Color.YELLOW); textSize = 30f })
         layout.addView(TextView(this).apply { text = "Swipe Right to Back →"; setTextColor(Color.GRAY); setPadding(0, 50, 0, 0) })
         
         setContentView(layout)
@@ -236,12 +236,13 @@ class EffectView(context: Context) : View(context) {
 }
 
 class CatDegreeView(context: Context) : View(context) {
-    // ★修正点：プロパティ名を 'progressValue' に変更して競合を回避
-    var progressValue: Int = 0
-        set(value) { 
-            field = value
-            invalidate() 
-        }
+    // ★ 修正：プロパティをprivateにし、専用の関数経由でセットするように変更
+    private var internalProgress: Int = 0
+    
+    fun setNewProgress(p: Int) {
+        internalProgress = p
+        invalidate()
+    }
     
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeWidth = 60f
@@ -260,8 +261,8 @@ class CatDegreeView(context: Context) : View(context) {
         paint.shader = gradient
         canvas.save()
         canvas.rotate(-90f, center, center)
-        // ★修正点：progressValue を使用
-        canvas.drawArc(rect, 0f, (progressValue / 100f) * 360f, false, paint)
+        // internalProgress を使用
+        canvas.drawArc(rect, 0f, (internalProgress / 100f) * 360f, false, paint)
         canvas.restore()
         paint.shader = null
     }
