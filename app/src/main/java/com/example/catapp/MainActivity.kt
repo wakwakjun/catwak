@@ -15,14 +15,15 @@ class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private lateinit var effectLayer: EffectView
     private lateinit var gestureDetector: GestureDetector
-    private var currentScreen = 0 // 0:Main, 1:Love, -1:Collection
+    private var currentScreen = 0 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         val listener = object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                val diffX = e2.x - (e1?.x ?: 0f)
+                val e1X = e1?.x ?: 0f
+                val diffX = e2.x - e1X
                 if (Math.abs(diffX) > 100) {
                     if (diffX > 0) onSwipeRight() else onSwipeLeft()
                     return true
@@ -55,7 +56,8 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
         val key = "love_cat_$catId"
-        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+        val currentLove = prefs.getInt(key, 0)
+        prefs.edit().putInt(key, currentLove + 1).apply()
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -89,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         guide.gravity = Gravity.CENTER
         val params = FrameLayout.LayoutParams(-1, -2)
         params.gravity = Gravity.BOTTOM
-        params.bottomMargin = 50
+        params.bottomMargin = 120
         root.addView(guide, params)
 
         setContentView(root)
@@ -113,7 +115,9 @@ class MainActivity : AppCompatActivity() {
         for (i in 1..7) {
             val love = prefs.getInt("love_cat_$i", 0)
             val row = TextView(this)
-            row.text = "Cat #$i : " + "❤".repeat(Math.min(love / 10 + 1, 10)) + " ($love)"
+            val heartCount = Math.min(love / 10 + 1, 10)
+            val hearts = "❤".repeat(heartCount)
+            row.text = "Cat #$i : $hearts ($love)"
             row.setTextColor(Color.LTGRAY)
             row.setPadding(0, 20, 0, 20)
             layout.addView(row)
@@ -170,10 +174,13 @@ class MainActivity : AppCompatActivity() {
 class EffectView(context: Context) : View(context) {
     private val stars = mutableListOf<Star>()
     private val random = Random()
-    class Star(val x: Float, var y: Float, var size: Float, var alpha: Int, val vx: Float, val vy: Float)
+    
+    // 変数 y, x, alpha を var にして書き換え可能にする
+    class Star(val startX: Float, var currentX: Float, var currentY: Float, val size: Float, var alphaValue: Int, val vx: Float, val vy: Float)
 
     fun addStar(x: Float, y: Float) {
-        stars.add(Star(x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f))
+        val s = Star(x, x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f)
+        stars.add(s)
         invalidate()
     }
 
@@ -183,35 +190,44 @@ class EffectView(context: Context) : View(context) {
         val it = stars.iterator()
         while (it.hasNext()) {
             val s = it.next()
-            paint.alpha = s.alpha
+            paint.alpha = s.alphaValue
             val path = Path()
+            val radius = s.size
+            val inner = radius / 2.5f
             for (i in 0 until 10) {
-                val r = if (i % 2 == 0) s.size else s.size / 2.5f
+                val r = if (i % 2 == 0) radius else inner
                 val ang = Math.toRadians((i * 36 + 270).toDouble())
-                val px = s.x + (r * Math.cos(ang)).toFloat()
-                val py = s.y + (r * Math.sin(ang)).toFloat()
+                val px = s.currentX + (r * Math.cos(ang)).toFloat()
+                val py = s.currentY + (r * Math.sin(ang)).toFloat()
                 if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
             }
             path.close()
             canvas.drawPath(path, paint)
-            s.y += s.vy; s.x += s.vx; s.alpha -= 10
-            if (s.alpha <= 0) it.remove()
+            
+            // ここで書き換え可能な var 変数を更新
+            s.currentY += s.vy
+            s.currentX += s.vx
+            s.alphaValue -= 10
+            
+            if (s.alphaValue <= 0) it.remove()
         }
         if (stars.isNotEmpty()) postInvalidateDelayed(30)
     }
 }
 
 class CatDegreeView(context: Context) : View(context) {
-    private var p: Int = 0
-    fun setVal(v: Int) { p = v; invalidate() }
+    private var pVal: Int = 0
+    fun setVal(v: Int) { pVal = v; invalidate() }
     override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
         paint.strokeWidth = 60f
-        val rect = RectF(50f, 50f, width - 50f, height - 50f)
+        val rect = RectF(100f, 100f, width.toFloat() - 100f, height.toFloat() - 100f)
         paint.color = Color.parseColor("#333333")
         canvas.drawArc(rect, 0f, 360f, false, paint)
         paint.color = Color.YELLOW
-        canvas.drawArc(rect, -90f, (p / 100f) * 360f, false, paint)
+        canvas.drawArc(rect, -90f, (pVal / 100f) * 360f, false, paint)
     }
 }
