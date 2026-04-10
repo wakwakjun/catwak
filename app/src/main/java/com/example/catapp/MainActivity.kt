@@ -16,6 +16,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var effectLayer: EffectView
     private lateinit var gestureDetector: GestureDetector
     private var currentScreen = 0 
+    
+    // ImageViewを特定するためのユニークなIDを保持
+    private val MAIN_IMAGE_ID = View.generateViewId()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,13 +54,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleTap(x: Float, y: Float) {
         if (currentScreen != 0) return 
+
+        // --- 振り向きロジック ---
+        val screenWidth = resources.displayMetrics.widthPixels
+        val direction = if (x > screenWidth / 2) 1.0f else -1.0f
+        
+        // メイン画面のImageViewを取得
+        val imageView = findViewById<ImageView>(MAIN_IMAGE_ID)
+        
+        imageView?.animate()?.apply {
+            scaleX(direction)      // 左右反転
+            scaleY(0.85f)          // ぷるん（潰れ）
+            duration = 100
+            withEndAction {
+                imageView.animate().scaleY(1.0f).setDuration(200).start() // ぷるん（戻り）
+            }
+            start()
+        }
+
+        // 星エフェクトと音
         for (i in 1..5) effectLayer.addStar(x, y)
         playSound()
+        
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
         val key = "love_cat_$catId"
-        val currentLove = prefs.getInt(key, 0)
-        prefs.edit().putInt(key, currentLove + 1).apply()
+        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -76,17 +98,19 @@ class MainActivity : AppCompatActivity() {
         val catId = prefs.getInt("animal_num", 1)
         val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
         
-        val img = ImageView(this)
-        val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
-        img.setImageResource(if (resId != 0) resId else android.R.drawable.ic_menu_gallery)
-        img.scaleType = ImageView.ScaleType.CENTER_INSIDE
+        val img = ImageView(this).apply {
+            id = MAIN_IMAGE_ID // ★ここでIDをセット！
+            val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
+            setImageResource(if (resId != 0) resId else android.R.drawable.ic_menu_gallery)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+        }
 
         effectLayer = EffectView(this)
         root.addView(img)
         root.addView(effectLayer)
         
         val guide = TextView(this)
-        guide.text = "< 猫度　　好感度 >"
+        guide.text = "< 猫達成度　　猫密度 >"
         guide.setTextColor(Color.DKGRAY)
         guide.gravity = Gravity.CENTER
         val params = FrameLayout.LayoutParams(-1, -2)
@@ -118,8 +142,7 @@ class MainActivity : AppCompatActivity() {
             val love = prefs.getInt("love_cat_$i", 0)
             val row = TextView(this)
             val heartCount = Math.min(love / 10 + 1, 10)
-            val hearts = "❤".repeat(heartCount)
-            row.text = "Cat #$i : $hearts ($love)"
+            row.text = "Cat #$i : " + "❤".repeat(heartCount) + " ($love)"
             row.setTextColor(Color.LTGRAY)
             row.setPadding(0, 20, 0, 20)
             layout.addView(row)
@@ -143,22 +166,18 @@ class MainActivity : AppCompatActivity() {
         }
         val pct = (seenCount.toFloat() / 21f * 100).toInt()
 
-        // タイトル
         val title = TextView(this)
         title.text = "猫達成度"
         title.textSize = 28f
         title.setTypeface(null, Typeface.BOLD)
         title.setPadding(0, 0, 0, 40)
-        // 100%達成で黄金に輝く
         if (pct >= 100) title.setTextColor(Color.YELLOW) else title.setTextColor(Color.WHITE)
         layout.addView(title)
         
-        // グラフ
         val chart = CatDegreeView(this)
         chart.setVal(pct)
         layout.addView(chart, LinearLayout.LayoutParams(500, 500))
         
-        // パーセント表示
         val percentText = TextView(this)
         percentText.text = "$pct%"
         percentText.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
@@ -172,72 +191,4 @@ class MainActivity : AppCompatActivity() {
     private fun playSound() {
         try {
             mediaPlayer?.release()
-            val resId = resources.getIdentifier("meow", "raw", packageName)
-            if (resId != 0) {
-                mediaPlayer = MediaPlayer.create(this, resId)
-                mediaPlayer?.start()
-            }
-        } catch (e: Exception) {}
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaPlayer?.release()
-    }
-}
-
-class EffectView(context: Context) : View(context) {
-    private val stars = mutableListOf<Star>()
-    private val random = Random()
-    class Star(val startX: Float, var currentX: Float, var currentY: Float, val size: Float, var alphaValue: Int, val vx: Float, val vy: Float)
-
-    fun addStar(x: Float, y: Float) {
-        val s = Star(x, x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f)
-        stars.add(s)
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        val paint = Paint()
-        paint.color = Color.YELLOW
-        val it = stars.iterator()
-        while (it.hasNext()) {
-            val s = it.next()
-            paint.alpha = s.alphaValue
-            val path = Path()
-            val radius = s.size
-            val inner = radius / 2.5f
-            for (i in 0 until 10) {
-                val r = if (i % 2 == 0) radius else inner
-                val ang = Math.toRadians((i * 36 + 270).toDouble())
-                val px = s.currentX + (r * Math.cos(ang)).toFloat()
-                val py = s.currentY + (r * Math.sin(ang)).toFloat()
-                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
-            }
-            path.close()
-            canvas.drawPath(path, paint)
-            s.currentY += s.vy
-            s.currentX += s.vx
-            s.alphaValue -= 10
-            if (s.alphaValue <= 0) it.remove()
-        }
-        if (stars.isNotEmpty()) postInvalidateDelayed(30)
-    }
-}
-
-class CatDegreeView(context: Context) : View(context) {
-    private var pVal: Int = 0
-    fun setVal(v: Int) { pVal = v; invalidate() }
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeWidth = 60f
-        val rect = RectF(100f, 100f, width.toFloat() - 100f, height.toFloat() - 100f)
-        paint.color = Color.parseColor("#333333")
-        canvas.drawArc(rect, 0f, 360f, false, paint)
-        paint.color = Color.YELLOW
-        canvas.drawArc(rect, -90f, (pVal / 100f) * 360f, false, paint)
-    }
-}
+            val resId = resources.
