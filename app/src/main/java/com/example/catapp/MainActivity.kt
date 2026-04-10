@@ -106,9 +106,11 @@ class MainActivity : AppCompatActivity() {
         layout.gravity = Gravity.CENTER_HORIZONTAL
 
         val tv = TextView(this)
-        tv.text = "Cat Love List"
+        tv.text = "猫密度 (Love Level)"
         tv.setTextColor(Color.WHITE)
-        tv.textSize = 24f
+        tv.textSize = 28f
+        tv.setTypeface(null, Typeface.BOLD)
+        tv.setPadding(0, 0, 0, 50)
         layout.addView(tv)
 
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
@@ -140,16 +142,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val pct = (seenCount.toFloat() / 21f * 100).toInt()
+
+        // タイトル
+        val title = TextView(this)
+        title.text = "猫達成度"
+        title.textSize = 28f
+        title.setTypeface(null, Typeface.BOLD)
+        title.setPadding(0, 0, 0, 40)
+        // 100%達成で黄金に輝く
+        if (pct >= 100) title.setTextColor(Color.YELLOW) else title.setTextColor(Color.WHITE)
+        layout.addView(title)
         
+        // グラフ
         val chart = CatDegreeView(this)
         chart.setVal(pct)
         layout.addView(chart, LinearLayout.LayoutParams(500, 500))
         
-        val tv = TextView(this)
-        tv.text = "$pct%"
-        tv.setTextColor(Color.YELLOW)
-        tv.textSize = 30f
-        layout.addView(tv)
+        // パーセント表示
+        val percentText = TextView(this)
+        percentText.text = "$pct%"
+        percentText.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+        percentText.textSize = 30f
+        percentText.setPadding(0, 40, 0, 0)
+        layout.addView(percentText)
         
         setContentView(layout)
     }
@@ -174,8 +189,6 @@ class MainActivity : AppCompatActivity() {
 class EffectView(context: Context) : View(context) {
     private val stars = mutableListOf<Star>()
     private val random = Random()
-    
-    // 変数 y, x, alpha を var にして書き換え可能にする
     class Star(val startX: Float, var currentX: Float, var currentY: Float, val size: Float, var alphaValue: Int, val vx: Float, val vy: Float)
 
     fun addStar(x: Float, y: Float) {
@@ -203,12 +216,9 @@ class EffectView(context: Context) : View(context) {
             }
             path.close()
             canvas.drawPath(path, paint)
-            
-            // ここで書き換え可能な var 変数を更新
             s.currentY += s.vy
             s.currentX += s.vx
             s.alphaValue -= 10
-            
             if (s.alphaValue <= 0) it.remove()
         }
         if (stars.isNotEmpty()) postInvalidateDelayed(30)
