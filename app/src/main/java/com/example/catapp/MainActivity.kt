@@ -87,12 +87,18 @@ class MainActivity : AppCompatActivity() {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = hour >= 22 || hour < 6
         
+        // ★修正ポイント：起動のたびにランダムで猫を選ぶ（テストとコレクションを捗らせるため）
+        val catId = (1..7).random() 
+        prefs.edit().putInt("animal_num", catId).apply()
+
         val root = FrameLayout(this)
         root.setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
 
-        val catId = prefs.getInt("animal_num", 1)
         val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
         
+        // 今見た猫を保存（猫達成度のため）
+        prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
+
         val img = ImageView(this)
         img.id = MAIN_IMAGE_ID
         val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
@@ -164,19 +170,20 @@ class MainActivity : AppCompatActivity() {
         title.textSize = 28f
         title.setTypeface(null, Typeface.BOLD)
         title.setPadding(0, 0, 0, 40)
-        title.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+        // 100%達成で黄金に輝く
+        if (pct >= 100) title.setTextColor(Color.YELLOW) else title.setTextColor(Color.WHITE)
         layout.addView(title)
         
         val chart = CatDegreeView(this)
         chart.setVal(pct)
         layout.addView(chart, LinearLayout.LayoutParams(500, 500))
         
-        val pctTv = TextView(this)
-        pctTv.text = "$pct%"
-        pctTv.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
-        pctTv.textSize = 30f
-        pctTv.setPadding(0, 40, 0, 0)
-        layout.addView(pctTv)
+        val percentText = TextView(this)
+        percentText.text = "$pct%"
+        percentText.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+        percentText.textSize = 30f
+        percentText.setPadding(0, 40, 0, 0)
+        layout.addView(percentText)
         
         setContentView(layout)
     }
@@ -204,7 +211,8 @@ class EffectView(context: Context) : View(context) {
     class Star(val startX: Float, var currentX: Float, var currentY: Float, val size: Float, var alphaValue: Int, val vx: Float, val vy: Float)
 
     fun addStar(x: Float, y: Float) {
-        stars.add(Star(x, x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f))
+        val s = Star(x, x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f)
+        stars.add(s)
         invalidate()
     }
 
@@ -240,11 +248,10 @@ class CatDegreeView(context: Context) : View(context) {
     fun setVal(v: Int) { pVal = v; invalidate() }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeWidth = 60f
-        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = 60f
         val rect = RectF(100f, 100f, width.toFloat() - 100f, height.toFloat() - 100f)
         paint.color = Color.parseColor("#333333")
         canvas.drawCircle(width / 2f, height / 2f, (width / 2f) - 100f, paint)
