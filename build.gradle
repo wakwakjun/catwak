@@ -1,11 +1,15 @@
+// プロジェクト全体のビルド設定
 buildscript {
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+        classpath("com.android.tools.build:gradle:8.2.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        classpath("com.google.android.play:review:2.0.1") // 追加
+        classpath("com.google.android.play:app-update:2.1.0") // 追加
+    }
 }
 
 allprojects {
@@ -13,4 +17,8 @@ allprojects {
         google()
         mavenCentral()
     }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
