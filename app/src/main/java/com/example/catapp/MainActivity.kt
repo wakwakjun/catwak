@@ -10,6 +10,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.android.play.core.review.ReviewManagerFactory
 
 class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
@@ -74,7 +75,16 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
         val key = "love_cat_$catId"
-        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+        
+        // 好感度を更新
+        val currentLove = prefs.getInt(key, 0)
+        val nextLove = currentLove + 1
+        prefs.edit().putInt(key, nextLove).apply()
+
+        // 50回なでるごとにレビューチャンス
+        if (nextLove % 50 == 0) {
+            requestReviewIfAppropriate()
+        }
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -87,7 +97,6 @@ class MainActivity : AppCompatActivity() {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = hour >= 22 || hour < 6
         
-        // ★修正ポイント：起動のたびにランダムで猫を選ぶ（テストとコレクションを捗らせるため）
         val catId = (1..7).random() 
         prefs.edit().putInt("animal_num", catId).apply()
 
@@ -95,8 +104,6 @@ class MainActivity : AppCompatActivity() {
         root.setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
 
         val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
-        
-        // 今見た猫を保存（猫達成度のため）
         prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
 
         val img = ImageView(this)
@@ -170,7 +177,6 @@ class MainActivity : AppCompatActivity() {
         title.textSize = 28f
         title.setTypeface(null, Typeface.BOLD)
         title.setPadding(0, 0, 0, 40)
-        // 100%達成で黄金に輝く
         if (pct >= 100) title.setTextColor(Color.YELLOW) else title.setTextColor(Color.WHITE)
         layout.addView(title)
         
@@ -199,11 +205,26 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
+    private fun requestReviewIfAppropriate() {
+        val manager = ReviewManagerFactory.create(this)
+        val request = manager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val reviewInfo = task.result
+                manager.launchReviewFlow(this, reviewInfo).addOnCompleteListener { _ ->
+                    // レビュー完了（またはキャンセル）
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer?.release()
     }
 }
+
+// --- 以下、カスタムビュークラス ---
 
 class EffectView(context: Context) : View(context) {
     private val stars = mutableListOf<Star>()
