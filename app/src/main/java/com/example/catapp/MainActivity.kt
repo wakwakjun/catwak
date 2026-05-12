@@ -11,17 +11,67 @@ import androidx.appcompat.app.AppCompatActivity
 import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.play.core.review.ReviewManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
+import com.google.android.play.core.install.InstallStateUpdatedListener
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private lateinit var effectLayer: EffectView
     private lateinit var gestureDetector: GestureDetector
+    
+    // アップデート管理用の変数を修正
+    private lateinit var appUpdateManager: AppUpdateManager
+    
+    // 1. アップデートの状態を監視するリスナー
+    private val installListener = InstallStateUpdatedListener { state ->
+        if (state.installStatus() == InstallStatus.DOWNLOADED) {
+            showUpdateSnackbar()
+        }
+    }
+
+    // 2. アップデートがあるかチェック
+    private fun checkForUpdate() {
+        val appUpdateInfoTask = appUpdateManager.appUpdateInfo
+        appUpdateInfoTask.addOnSuccessListener { info ->
+            if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                && info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
+            ) {
+                appUpdateManager.startUpdateFlowForResult(info, AppUpdateType.FLEXIBLE, this, 999)
+            }
+        }
+        appUpdateManager.registerListener(installListener)
+    }
+
+    // 3. 再起動ボタンの表示
+    private fun showUpdateSnackbar() {
+        val root = findViewById<View>(android.R.id.content)
+        Snackbar.make(root, "アップデートの準備完了！", Snackbar.LENGTH_INDEFINITE).apply {
+            setAction("再起動") { 
+                appUpdateManager.completeUpdate() 
+            }
+            show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkForUpdate()
+    }
+
     private var currentScreen = 0 
     private val MAIN_IMAGE_ID = View.generateViewId()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // アップデートマネージャーの初期化（これを忘れるとクラッシュします）
+        appUpdateManager = AppUpdateManagerFactory.create(this)
+
         val listener = object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                 val e1X = e1?.x ?: 0f
@@ -76,12 +126,10 @@ class MainActivity : AppCompatActivity() {
         val catId = prefs.getInt("animal_num", 1)
         val key = "love_cat_$catId"
         
-        // 好感度を更新
         val currentLove = prefs.getInt(key, 0)
         val nextLove = currentLove + 1
         prefs.edit().putInt(key, nextLove).apply()
 
-        // 50回なでるごとにレビューチャンス
         if (nextLove % 50 == 0) {
             requestReviewIfAppropriate()
         }
@@ -195,88 +243,3 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playSound() {
-        try {
-            mediaPlayer?.release()
-            val resId = resources.getIdentifier("meow", "raw", packageName)
-            if (resId != 0) {
-                mediaPlayer = MediaPlayer.create(this, resId)
-                mediaPlayer?.start()
-            }
-        } catch (e: Exception) {}
-    }
-
-    private fun requestReviewIfAppropriate() {
-        val manager = ReviewManagerFactory.create(this)
-        val request = manager.requestReviewFlow()
-        request.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val reviewInfo = task.result
-                manager.launchReviewFlow(this, reviewInfo).addOnCompleteListener { _ ->
-                    // レビュー完了（またはキャンセル）
-                }
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaPlayer?.release()
-    }
-}
-
-// --- 以下、カスタムビュークラス ---
-
-class EffectView(context: Context) : View(context) {
-    private val stars = mutableListOf<Star>()
-    private val random = Random()
-    class Star(val startX: Float, var currentX: Float, var currentY: Float, val size: Float, var alphaValue: Int, val vx: Float, val vy: Float)
-
-    fun addStar(x: Float, y: Float) {
-        val s = Star(x, x, y, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f)
-        stars.add(s)
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        val paint = Paint().apply { color = Color.YELLOW; style = Paint.Style.FILL }
-        val it = stars.iterator()
-        while (it.hasNext()) {
-            val s = it.next()
-            paint.alpha = s.alphaValue
-            val path = Path()
-            val radius = s.size
-            val inner = radius / 2.5f
-            for (i in 0 until 10) {
-                val r = if (i % 2 == 0) radius else inner
-                val ang = Math.toRadians((i * 36 + 270).toDouble())
-                val px = s.currentX + (r * Math.cos(ang)).toFloat()
-                val py = s.currentY + (r * Math.sin(ang)).toFloat()
-                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
-            }
-            path.close()
-            canvas.drawPath(path, paint)
-            s.currentY += s.vy
-            s.currentX += s.vx
-            s.alphaValue -= 10
-            if (s.alphaValue <= 0) it.remove()
-        }
-        if (stars.isNotEmpty()) postInvalidateDelayed(30)
-    }
-}
-
-class CatDegreeView(context: Context) : View(context) {
-    private var pVal: Int = 0
-    fun setVal(v: Int) { pVal = v; invalidate() }
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeWidth = 60f
-        val rect = RectF(100f, 100f, width.toFloat() - 100f, height.toFloat() - 100f)
-        paint.color = Color.parseColor("#333333")
-        canvas.drawCircle(width / 2f, height / 2f, (width / 2f) - 100f, paint)
-        paint.color = Color.YELLOW
-        canvas.drawArc(rect, -90f, (pVal / 100f) * 360f, false, paint)
-    }
-}
