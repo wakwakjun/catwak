@@ -23,18 +23,14 @@ class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private lateinit var effectLayer: EffectView
     private lateinit var gestureDetector: GestureDetector
-    
-    // アップデート管理用の変数を修正
     private lateinit var appUpdateManager: AppUpdateManager
     
-    // 1. アップデートの状態を監視するリスナー
     private val installListener = InstallStateUpdatedListener { state ->
         if (state.installStatus() == InstallStatus.DOWNLOADED) {
             showUpdateSnackbar()
         }
     }
 
-    // 2. アップデートがあるかチェック
     private fun checkForUpdate() {
         val appUpdateInfoTask = appUpdateManager.appUpdateInfo
         appUpdateInfoTask.addOnSuccessListener { info ->
@@ -47,7 +43,6 @@ class MainActivity : AppCompatActivity() {
         appUpdateManager.registerListener(installListener)
     }
 
-    // 3. 再起動ボタンの表示
     private fun showUpdateSnackbar() {
         val root = findViewById<View>(android.R.id.content)
         Snackbar.make(root, "アップデートの準備完了！", Snackbar.LENGTH_INDEFINITE).apply {
@@ -69,7 +64,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // アップデートマネージャーの初期化（これを忘れるとクラッシュします）
         appUpdateManager = AppUpdateManagerFactory.create(this)
 
         val listener = object : GestureDetector.SimpleOnGestureListener() {
@@ -125,9 +119,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
         val key = "love_cat_$catId"
-        
-        val currentLove = prefs.getInt(key, 0)
-        val nextLove = currentLove + 1
+        val nextLove = prefs.getInt(key, 0) + 1
         prefs.edit().putInt(key, nextLove).apply()
 
         if (nextLove % 50 == 0) {
@@ -144,13 +136,11 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val isNight = hour >= 22 || hour < 6
-        
         val catId = (1..7).random() 
         prefs.edit().putInt("animal_num", catId).apply()
 
         val root = FrameLayout(this)
         root.setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
-
         val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
         prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
 
@@ -172,7 +162,6 @@ class MainActivity : AppCompatActivity() {
         params.gravity = Gravity.BOTTOM
         params.bottomMargin = 120
         root.addView(guide, params)
-
         setContentView(root)
     }
 
@@ -232,14 +221,96 @@ class MainActivity : AppCompatActivity() {
         chart.setVal(pct)
         layout.addView(chart, LinearLayout.LayoutParams(500, 500))
         
-        val percentText = TextView(this)
-        percentText.text = "$pct%"
-        percentText.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
-        percentText.textSize = 30f
-        percentText.setPadding(0, 40, 0, 0)
-        layout.addView(percentText)
-        
+        val pt = TextView(this)
+        pt.text = "$pct%"
+        pt.setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+        pt.textSize = 30f
+        pt.setPadding(0, 40, 0, 0)
+        layout.addView(pt)
         setContentView(layout)
     }
 
     private fun playSound() {
+        try {
+            mediaPlayer?.release()
+            val resId = resources.getIdentifier("meow", "raw", packageName)
+            if (resId != 0) {
+                mediaPlayer = MediaPlayer.create(this, resId)
+                mediaPlayer?.start()
+            }
+        } catch (e: Exception) {}
+    }
+
+    private fun requestReviewIfAppropriate() {
+        val manager = ReviewManagerFactory.create(this)
+        val request = manager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val reviewInfo = task.result
+                manager.launchReviewFlow(this, reviewInfo)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::appUpdateManager.isInitialized) {
+            appUpdateManager.unregisterListener(installListener)
+        }
+        mediaPlayer?.release()
+    }
+}
+
+// --- カスタムビュークラス ---
+
+class EffectView(context: Context) : View(context) {
+    private val stars = mutableListOf<Star>()
+    private val random = Random()
+    class Star(val x: Float, var y: Float, val s: Float, var a: Int, val vx: Float, val vy: Float)
+
+    fun addStar(px: Float, py: Float) {
+        stars.add(Star(px, py, random.nextFloat() * 40f + 10f, 255, (random.nextFloat() - 0.5f) * 20f, (random.nextFloat() - 0.5f) * 20f))
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val paint = Paint().apply { color = Color.YELLOW; style = Paint.Style.FILL }
+        val it = stars.iterator()
+        while (it.hasNext()) {
+            val s = it.next()
+            paint.alpha = s.a
+            val path = Path()
+            val r = s.s
+            for (i in 0 until 10) {
+                val dist = if (i % 2 == 0) r else r / 2.5f
+                val ang = Math.toRadians((i * 36 + 270).toDouble())
+                val px = s.x + (dist * Math.cos(ang)).toFloat()
+                val py = s.y + (dist * Math.sin(ang)).toFloat()
+                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            path.close()
+            canvas.drawPath(path, paint)
+            s.y += s.vy
+            s.a -= 10
+            if (s.a <= 0) it.remove()
+        }
+        if (stars.isNotEmpty()) postInvalidateDelayed(30)
+    }
+}
+
+class CatDegreeView(context: Context) : View(context) {
+    private var pVal: Int = 0
+    fun setVal(v: Int) { pVal = v; invalidate() }
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = 60f
+        val rect = RectF(100f, 100f, width.toFloat() - 100f, height.toFloat() - 100f)
+        paint.color = Color.parseColor("#333333")
+        canvas.drawCircle(width / 2f, height / 2f, (width / 2f) - 100f, paint)
+        paint.color = Color.YELLOW
+        canvas.drawArc(rect, -90f, (pVal / 100f) * 360f, false, paint)
+    }
+}
