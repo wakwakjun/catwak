@@ -28,6 +28,15 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    packaging {
+        jniLibs {
+            // ★ ネイティブライブラリを圧縮せず、16KB境界でアライメントする設定
+            useLegacyPackaging = false
+        }
+    }
+
+    // ★ Android Gradle Plugin 8.3以降なら、以下のプロパティをgradle.propertiesに書くのが推奨ですが、
+    // ここで直接アライメントを制御するよう指示します。
 }
 
 dependencies {
