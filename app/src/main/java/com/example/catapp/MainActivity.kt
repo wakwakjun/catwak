@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
-        val key = "love_cat_" + catId
+        val key = "love_cat_$catId"
         val nextLove = prefs.getInt(key, 0) + 1
         prefs.edit().putInt(key, nextLove).apply()
 
@@ -100,63 +100,60 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putInt("animal_num", catId).apply()
 
         val root = FrameLayout(this)
-        root.setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
+        val bgColor = if (isNight) Color.parseColor("#000011") else Color.BLACK
+        root.setBackgroundColor(bgColor)
 
         val statusList = listOf("sleep", "eat", "play")
         val status = if (isNight) "sleep" else statusList.random()
-        prefs.edit().putBoolean("seen_" + catId + "_" + status, true).apply()
+        prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
 
-        val resName = "cat" + catId + "_" + status
-        val resId = resources.getIdentifier(resName, "drawable", packageName)
+        val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
         val bitmap = BitmapFactory.decodeResource(resources, if (resId != 0) resId else android.R.drawable.ic_menu_gallery)
         
-        val img = MeshImageView(this).apply {
-            id = MAIN_IMAGE_ID
-            setBitmap(bitmap)
-        }
+        val img = MeshImageView(this)
+        img.id = MAIN_IMAGE_ID
+        img.setBitmap(bitmap)
 
         effectLayer = EffectView(this)
         root.addView(img)
         root.addView(effectLayer)
         
-        val guide = TextView(this).apply {
-            text = "< 猫達成度　　猫密度 >"
-            setTextColor(Color.DKGRAY)
-            gravity = Gravity.CENTER
-        }
-        val params = FrameLayout.LayoutParams(-1, -2).apply {
-            gravity = Gravity.BOTTOM
-            bottomMargin = 150
-        }
+        val guide = TextView(this)
+        guide.text = "< 猫達成度　　猫密度 >"
+        guide.setTextColor(Color.DKGRAY)
+        guide.gravity = Gravity.CENTER
+        val params = FrameLayout.LayoutParams(-1, -2)
+        params.gravity = Gravity.BOTTOM
+        params.bottomMargin = 150
         root.addView(guide, params)
         setContentView(root)
     }
 
     private fun showLoveListScreen() {
         currentScreen = 1
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#121212"))
-            setPadding(50, 100, 50, 50)
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
-        val tv = TextView(this).apply {
-            text = "猫密度 (Love Level)"
-            setTextColor(Color.WHITE)
-            textSize = 28f
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, 50)
-        }
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setBackgroundColor(Color.parseColor("#121212"))
+        layout.setPadding(50, 100, 50, 50)
+        layout.gravity = Gravity.CENTER_HORIZONTAL
+
+        val tv = TextView(this)
+        tv.text = "猫密度 (Love Level)"
+        tv.setTextColor(Color.WHITE)
+        tv.textSize = 28f
+        tv.setTypeface(null, Typeface.BOLD)
+        tv.setPadding(0, 0, 0, 50)
         layout.addView(tv)
+
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         for (i in 1..7) {
-            val love = prefs.getInt("love_cat_" + i, 0)
-            val row = TextView(this).apply {
-                val hearts = (1..(Math.min(love / 10 + 1, 10))).joinToString("") { "❤" }
-                text = "Cat #" + i + " : " + hearts + " (" + love + ")"
-                setTextColor(Color.LTGRAY)
-                setPadding(0, 20, 0, 20)
-            }
+            val love = prefs.getInt("love_cat_$i", 0)
+            val row = TextView(this)
+            val heartCount = Math.min(love / 10 + 1, 10)
+            val hearts = (1..heartCount).joinToString("") { "❤" }
+            row.text = "Cat #$i : $hearts ($love)"
+            row.setTextColor(Color.LTGRAY)
+            row.setPadding(0, 20, 0, 20)
             layout.addView(row)
         }
         setContentView(layout)
@@ -164,21 +161,50 @@ class MainActivity : AppCompatActivity() {
 
     private fun showCollectionScreen() {
         currentScreen = -1
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#121212"))
-        }
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.gravity = Gravity.CENTER
+        layout.setBackgroundColor(Color.parseColor("#121212"))
+
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         var seenCount = 0
         for (i in 1..7) {
             for (s in listOf("sleep", "eat", "play")) {
-                if (prefs.getBoolean("seen_" + i + "_" + s, false)) seenCount++
+                if (prefs.getBoolean("seen_${i}_$s", false)) seenCount++
             }
         }
         val pct = (seenCount.toFloat() / 21f * 100).toInt()
-        val title = TextView(this).apply {
-            text = "猫達成度"
-            textSize = 28f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(if (pct >= 100) Color.YELLOW else Color
+
+        val title = TextView(this)
+        title.text = "猫達成度"
+        title.textSize = 28f
+        title.setTypeface(null, Typeface.BOLD)
+        title.setPadding(0, 0, 0, 40)
+        if (pct >= 100) title.setTextColor(Color.YELLOW) else title.setTextColor(Color.WHITE)
+        layout.addView(title)
+        
+        val chart = CatDegreeView(this)
+        chart.setVal(pct)
+        layout.addView(chart, LinearLayout.LayoutParams(500, 500))
+        
+        val pctTv = TextView(this)
+        pctTv.text = "$pct%"
+        val pColor = if (pct >= 100) Color.YELLOW else Color.WHITE
+        pctTv.setTextColor(pColor)
+        pctTv.textSize = 30f
+        pctTv.setPadding(0, 40, 0, 0)
+        layout.addView(pctTv)
+        
+        setContentView(layout)
+    }
+
+    private fun requestReviewIfAppropriate() {
+        val manager = ReviewManagerFactory.create(this)
+        manager.requestReviewFlow().addOnCompleteListener { task ->
+            if (task.isSuccessful) manager.launchReviewFlow(this, task.result)
+        }
+    }
+
+    private fun checkForUpdate() {
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
+            if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && info.isUpdateTypeAllowed(AppUpdateType.FLEX
