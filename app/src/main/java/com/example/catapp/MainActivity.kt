@@ -5,6 +5,7 @@ import android.graphics.*
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.*
+import android.view.animation.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.play.core.review.ReviewManagerFactory
@@ -35,7 +36,8 @@ class MainActivity : AppCompatActivity() {
         
         val listener = object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                val diffX = (e2.x) - (e1?.x ?: 0f)
+                val e1X = e1?.x ?: 0f
+                val diffX = e2.x - e1X
                 if (Math.abs(diffX) > 100) {
                     if (diffX > 0) onSwipeRight() else onSwipeLeft()
                     return true
@@ -51,15 +53,21 @@ class MainActivity : AppCompatActivity() {
         showMainScreen()
     }
 
-    private fun onSwipeLeft() { if (currentScreen == 0) showCollectionScreen() else if (currentScreen == 1) showMainScreen() }
-    private fun onSwipeRight() { if (currentScreen == 0) showLoveListScreen() else if (currentScreen == -1) showMainScreen() }
+    private fun onSwipeLeft() {
+        if (currentScreen == 0) showCollectionScreen()
+        else if (currentScreen == 1) showMainScreen()
+    }
+
+    private fun onSwipeRight() {
+        if (currentScreen == 0) showLoveListScreen()
+        else if (currentScreen == -1) showMainScreen()
+    }
 
     private fun handleTap(x: Float, y: Float) {
         if (currentScreen != 0) return 
         val screenWidth = resources.displayMetrics.widthPixels
         val direction = if (x > screenWidth / 2) 1.0f else -1.0f
         
-        // メッシュビューに対しても反転とぷるぷるを適用
         val meshView = findViewById<MeshImageView>(MAIN_IMAGE_ID)
         meshView?.animate()?.scaleX(direction)?.scaleY(0.85f)?.setDuration(100)?.withEndAction {
             meshView.animate().scaleY(1.0f).setDuration(200).start()
@@ -76,6 +84,8 @@ class MainActivity : AppCompatActivity() {
         if (nextLove % 50 == 0) requestReviewIfAppropriate()
     }
 
+    override fun onTouchEvent(e: MotionEvent): Boolean = gestureDetector.onTouchEvent(e) || super.onTouchEvent(e)
+
     private fun showMainScreen() {
         currentScreen = 0
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
@@ -90,9 +100,9 @@ class MainActivity : AppCompatActivity() {
         val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
         prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
 
-        // ★ ImageViewの代わりにMeshImageViewを使用
         val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
         val bitmap = BitmapFactory.decodeResource(resources, if (resId != 0) resId else android.R.drawable.ic_menu_gallery)
+        
         val img = MeshImageView(this).apply {
             id = MAIN_IMAGE_ID
             setBitmap(bitmap)
@@ -115,71 +125,111 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
     }
 
-    private fun showLoveListScreen() { /* 以前のコードと同じため省略 */ }
-    private fun showCollectionScreen() { /* 以前のコードと同じため省略 */ }
-    
-    private fun requestReviewIfAppropriate() { /* 省略 */ }
-    private fun checkForUpdate() { /* 省略 */ }
-    private fun showUpdateSnackbar() { /* 省略 */ }
-    private fun playSound() { /* 省略 */ }
-    override fun onResume() { super.onResume() ; checkForUpdate() }
-    override fun onTouchEvent(e: MotionEvent): Boolean = gestureDetector.onTouchEvent(e) || super.onTouchEvent(e)
-}
+    private fun showLoveListScreen() {
+        currentScreen = 1
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#121212"))
+            setPadding(50, 100, 50, 50)
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+        val tv = TextView(this).apply {
+            text = "猫密度 (Love Level)"
+            setTextColor(Color.WHITE)
+            textSize = 28f
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, 50)
+        }
+        layout.addView(tv)
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        for (i in 1..7) {
+            val love = prefs.getInt("love_cat_$i", 0)
+            val row = TextView(this).apply {
+                text = "Cat #$i : " + "❤".repeat(Math.min(love / 10 + 1, 10)) + " ($love)"
+                setTextColor(Color.LTGRAY)
+                setPadding(0, 20, 0, 20)
+            }
+            layout.addView(row)
+        }
+        setContentView(layout)
+    }
 
-// --- プランBの核心：メッシュ変形カスタムビュー ---
-
-class MeshImageView(context: Context) : View(context) {
-    private var bitmap: Bitmap? = null
-    private val MESH_WIDTH = 20
-    private val MESH_HEIGHT = 20
-    private val COUNT = (MESH_WIDTH + 1) * (MESH_HEIGHT + 1)
-    private val verts = FloatArray(COUNT * 2)
-    private val orig = FloatArray(COUNT * 2)
-    private var time = 0f
-
-    fun setBitmap(bm: Bitmap) {
-        bitmap = bm
-        val w = bm.width.toFloat()
-        val h = bm.height.toFloat()
-        var index = 0
-        for (y in 0..MESH_HEIGHT) {
-            val fy = h * y / MESH_HEIGHT
-            for (x in 0..MESH_WIDTH) {
-                val fx = w * x / MESH_WIDTH
-                orig[index * 2 + 0] = fx
-                verts[index * 2 + 0] = fx
-                orig[index * 2 + 1] = fy
-                verts[index * 2 + 1] = fy
-                index++
+    private fun showCollectionScreen() {
+        currentScreen = -1
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#121212"))
+        }
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        var seenCount = 0
+        for (i in 1..7) {
+            for (s in listOf("sleep", "eat", "play")) {
+                if (prefs.getBoolean("seen_${i}_$s", false)) seenCount++
             }
         }
+        val pct = (seenCount.toFloat() / 21f * 100).toInt()
+        val title = TextView(this).apply {
+            text = "猫達成度"
+            textSize = 28f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+            setPadding(0, 0, 0, 40)
+        }
+        layout.addView(title)
+        val chart = CatDegreeView(this).apply { setVal(pct) }
+        layout.addView(chart, LinearLayout.LayoutParams(500, 500))
+        val pctTv = TextView(this).apply {
+            text = "$pct%"
+            setTextColor(if (pct >= 100) Color.YELLOW else Color.WHITE)
+            textSize = 30f
+            setPadding(0, 40, 0, 0)
+        }
+        layout.addView(pctTv)
+        setContentView(layout)
     }
 
-    override fun onDraw(canvas: Canvas) {
-        val bm = bitmap ?: return
-        time += 0.1f
-        
-        // 中央付近（お腹）を呼吸に合わせて動かすロジック
-        for (i in 0 until COUNT) {
-            val ox = orig[i * 2 + 0]
-            val oy = orig[i * 2 + 1]
-            
-            // サイン波でY座標を揺らす（中央に近いほど大きく揺れる）
-            val distort = Math.sin((time + ox * 0.01).toDouble()).toFloat() * 15f
-            val weight = 1.0f - (Math.abs(ox - bm.width/2f) / (bm.width/2f)) // 端にいくほど影響を弱める
-            
-            verts[i * 2 + 0] = ox
-            verts[i * 2 + 1] = oy + (distort * weight)
+    private fun requestReviewIfAppropriate() {
+        val manager = ReviewManagerFactory.create(this)
+        manager.requestReviewFlow().addOnCompleteListener { task ->
+            if (task.isSuccessful) manager.launchReviewFlow(this, task.result)
         }
+    }
 
-        // 画面中央に描画するための計算
-        canvas.save()
-        canvas.translate((width - bm.width) / 2f, (height - bm.height) / 2f)
-        canvas.drawBitmapMesh(bm, MESH_WIDTH, MESH_HEIGHT, verts, 0, null, 0, null)
-        canvas.restore()
-        
-        postInvalidateOnAnimation()
+    private fun checkForUpdate() {
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
+            if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE && info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                appUpdateManager.startUpdateFlowForResult(info, AppUpdateType.FLEXIBLE, this, 999)
+            }
+        }
+        appUpdateManager.registerListener(installListener)
+    }
+
+    private fun showUpdateSnackbar() {
+        val root = findViewById<View>(android.R.id.content)
+        Snackbar.make(root, "アップデート完了！", Snackbar.LENGTH_INDEFINITE).apply {
+            setAction("再起動") { appUpdateManager.completeUpdate() }
+            show()
+        }
+    }
+
+    private fun playSound() {
+        try {
+            mediaPlayer?.release()
+            val resId = resources.getIdentifier("meow", "raw", packageName)
+            if (resId != 0) {
+                mediaPlayer = MediaPlayer.create(this, resId)
+                mediaPlayer?.start()
+            }
+        } catch (e: Exception) {}
+    }
+
+    override fun onResume() { super.onResume(); checkForUpdate() }
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::appUpdateManager.isInitialized) appUpdateManager.unregisterListener(installListener)
+        mediaPlayer?.release()
     }
 }
 
-// --- 他のViewクラス（EffectView, CatDegreeView）は維持 ---
+// --- 以下、独立したクラス群
