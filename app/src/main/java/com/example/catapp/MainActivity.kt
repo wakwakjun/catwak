@@ -27,7 +27,9 @@ class MainActivity : AppCompatActivity() {
     private val MAIN_IMAGE_ID = View.generateViewId()
 
     private val installListener = InstallStateUpdatedListener { state ->
-        if (state.installStatus() == InstallStatus.DOWNLOADED) showUpdateSnackbar()
+        if (state.installStatus() == InstallStatus.DOWNLOADED) {
+            showUpdateSnackbar()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,10 +80,13 @@ class MainActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val catId = prefs.getInt("animal_num", 1)
-        val key = "love_cat_$catId"
+        val key = "love_cat_" + catId
         val nextLove = prefs.getInt(key, 0) + 1
         prefs.edit().putInt(key, nextLove).apply()
-        if (nextLove % 50 == 0) requestReviewIfAppropriate()
+
+        if (nextLove % 50 == 0) {
+            requestReviewIfAppropriate()
+        }
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean = gestureDetector.onTouchEvent(e) || super.onTouchEvent(e)
@@ -97,10 +102,12 @@ class MainActivity : AppCompatActivity() {
         val root = FrameLayout(this)
         root.setBackgroundColor(if (isNight) Color.parseColor("#000011") else Color.BLACK)
 
-        val status = if (isNight) "sleep" else listOf("sleep", "eat", "play").random()
-        prefs.edit().putBoolean("seen_${catId}_$status", true).apply()
+        val statusList = listOf("sleep", "eat", "play")
+        val status = if (isNight) "sleep" else statusList.random()
+        prefs.edit().putBoolean("seen_" + catId + "_" + status, true).apply()
 
-        val resId = resources.getIdentifier("cat${catId}_$status", "drawable", packageName)
+        val resName = "cat" + catId + "_" + status
+        val resId = resources.getIdentifier(resName, "drawable", packageName)
         val bitmap = BitmapFactory.decodeResource(resources, if (resId != 0) resId else android.R.drawable.ic_menu_gallery)
         
         val img = MeshImageView(this).apply {
@@ -143,9 +150,10 @@ class MainActivity : AppCompatActivity() {
         layout.addView(tv)
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         for (i in 1..7) {
-            val love = prefs.getInt("love_cat_$i", 0)
+            val love = prefs.getInt("love_cat_" + i, 0)
             val row = TextView(this).apply {
-                text = "Cat #$i : " + "❤".repeat(Math.min(love / 10 + 1, 10)) + " ($love)"
+                val hearts = (1..(Math.min(love / 10 + 1, 10))).joinToString("") { "❤" }
+                text = "Cat #" + i + " : " + hearts + " (" + love + ")"
                 setTextColor(Color.LTGRAY)
                 setPadding(0, 20, 0, 20)
             }
@@ -164,4 +172,13 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         var seenCount = 0
         for (i in 1..7) {
-            for (s in listOf("sleep", "
+            for (s in listOf("sleep", "eat", "play")) {
+                if (prefs.getBoolean("seen_" + i + "_" + s, false)) seenCount++
+            }
+        }
+        val pct = (seenCount.toFloat() / 21f * 100).toInt()
+        val title = TextView(this).apply {
+            text = "猫達成度"
+            textSize = 28f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(if (pct >= 100) Color.YELLOW else Color
