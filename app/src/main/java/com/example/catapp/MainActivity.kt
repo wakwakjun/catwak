@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(effectLayer)
         
         val guide = TextView(this)
-        guide.text = "< 猫達成度　　猫密度 >"
+        guide.text = "< 猫達成度  猫密度 >"
         guide.setTextColor(Color.DKGRAY)
         guide.gravity = Gravity.CENTER
         val params = FrameLayout.LayoutParams(-1, -2)
@@ -243,8 +243,6 @@ class MainActivity : AppCompatActivity() {
         mediaPlayer?.release()
     }
 }
-
-// --- 独立したクラス定義 ---
 
 class MeshImageView(context: Context) : View(context) {
     private var bitmap: Bitmap? = null
