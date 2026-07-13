@@ -11,13 +11,13 @@ android {
         applicationId "jp.myuser.supercatapp"
         minSdk 24
         targetSdk 35
-        // ★ バージョンをさらに1つ上げました
-        versionCode 187
-        versionName "1.0.187"
+        // ★ バージョンコードを188に引き上げました
+        versionCode 188
+        versionName "1.0.188"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
-        // 【容量節約技】日本語リソースのみに絞り、アプリ容量を数百KB削減
+        // 【16KB端末対策に伴う容量削減】日本語リソースのみに絞り、アプリ容量を数百KB削減
         resConfigs "ja"
     }
 
