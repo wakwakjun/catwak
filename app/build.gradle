@@ -11,20 +11,20 @@ android {
         applicationId "jp.myuser.supercatapp"
         minSdk 24
         targetSdk 35
-        // ★ バージョンコードを188に引き上げました
-        versionCode 188
-        versionName "1.0.188"
+        // ★ バージョンコードを189に引き上げました
+        versionCode 189
+        versionName "1.0.189"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
-        // 【16KB端末対策に伴う容量削減】日本語リソースのみに絞り、アプリ容量を数百KB削減
+        // 【容量削減】日本語リソースのみに絞り、16KB化による容量増加を相殺
         resConfigs "ja"
     }
 
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources true // 【容量節約技】未使用のリソースを自動削除
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -38,7 +38,7 @@ android {
         jvmTarget = '17'
     }
 
-    // ★ 16KBアライメントエラー（16 KB page size compatibility）を回避する設定
+    // ★ 16KBページサイズ対応を強制する設定
     packaging {
         jniLibs {
             useLegacyPackaging = false
@@ -52,7 +52,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
-    // Play Core & Review (アプリ内アップデート・レビュー用)
+    // Play Core & Review
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.google.android.play:review-ktx:2.0.1'
     implementation 'com.google.android.play:app-update:2.1.0'
