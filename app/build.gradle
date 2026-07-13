@@ -11,13 +11,13 @@ android {
         applicationId "jp.myuser.supercatapp"
         minSdk 24
         targetSdk 35
-        // ★ バージョンコードを189に引き上げました
-        versionCode 189
-        versionName "1.0.189"
+        // ★ バージョンコードを190に引き上げました
+        versionCode 190
+        versionName "1.0.190"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
-        // 【容量削減】日本語リソースのみに絞り、16KB化による容量増加を相殺
+        // 【容量削減】日本語リソースのみに絞り、容量増加を最適化
         resConfigs "ja"
     }
 
@@ -38,7 +38,7 @@ android {
         jvmTarget = '17'
     }
 
-    // ★ 16KBページサイズ対応を強制する設定
+    // ★ 16KBページサイズ（Android 15互換）対応を強制する設定
     packaging {
         jniLibs {
             useLegacyPackaging = false
