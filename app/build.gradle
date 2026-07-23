@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId "jp.myuser.supercatapp"
         minSdk 24
-        targetSdk 35
+        targetSdk 32
         // ★ バージョンコードを190に引き上げました
         versionCode 190
         versionName "1.0.190"
